@@ -46,6 +46,7 @@ dependencies:
   flutter_svg: ^2.2.3
   flutter_native_splash: ^2.4.7
   sign_in_with_apple: ^7.0.1
+  infinite_scroll_pagination: ^5.1.1
 
 flutter_native_splash:
   color: "#ffffff" # Cor de fundo (Branco)

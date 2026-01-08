@@ -23,9 +23,15 @@ class _LoginPageState extends State<LoginPage> {
         // Usuário logado -> Vai para Home
         Navigator.of(
           context,
-        ).pushReplacement(MaterialPageRoute(builder: (_) => MyHomePage()));
+        ).pushReplacement(MaterialPageRoute(builder: (_) => PaginatedHomeScreen()));
       }
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    checkAuth();
   }
 
   /// --- LOGIN OAUTH (Navegador) ---
@@ -44,9 +50,9 @@ class _LoginPageState extends State<LoginPage> {
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
-      // Navigator.of(
-      //   context,
-      // ).pushReplacement(MaterialPageRoute(builder: (context) => MyHomePage()));
+            Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (context) => PaginatedHomeScreen()));
     }
   }
 
