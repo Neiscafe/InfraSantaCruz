@@ -29,6 +29,10 @@
 				</array>
 			</dict>
 		</array>
+		<key>NSLocationWhenInUseUsageDescription</key>
+        <string>Precisamos da sua localização para mostrar posts e lugares próximos a você.</string>
+        <key>NSLocationAlwaysUsageDescription</key>
+        <string>Precisamos da sua localização para atualizar o feed mesmo em segundo plano.</string>
 		<key>NSCameraUsageDescription</key>
 		<string>Explanation on why the camera access is needed.</string>
 		<key>NSMicrophoneUsageDescription</key>

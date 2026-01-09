@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/MyAppController.dart';
-import 'package:myapp/MyHomePage.dart';
+import 'package:myapp/HomePage.dart';
+import 'package:myapp/PermissaoPage.dart';
 import 'package:myapp/SplashScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -23,7 +24,7 @@ class _LoginPageState extends State<LoginPage> {
         // Usuário logado -> Vai para Home
         Navigator.of(
           context,
-        ).pushReplacement(MaterialPageRoute(builder: (_) => PaginatedHomeScreen()));
+        ).pushReplacement(MaterialPageRoute(builder: (_) => PermissaoPage()));
       }
     });
   }
@@ -52,7 +53,7 @@ class _LoginPageState extends State<LoginPage> {
       if (mounted) setState(() => _isLoading = false);
             Navigator.of(
         context,
-      ).pushReplacement(MaterialPageRoute(builder: (context) => PaginatedHomeScreen()));
+      ).pushReplacement(MaterialPageRoute(builder: (context) => PermissaoPage()));
     }
   }
 

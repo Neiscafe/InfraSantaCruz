@@ -3,9 +3,18 @@ import 'dart:io';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'Post.dart';
+
 class MyAppController {
   static final supabase = Supabase.instance.client;
   bool _ativo = false;
+
+
+  Future<List<Post>> buscaPosts()async{
+    _estaAtivo();
+    final response= supabase.from('post').select();
+    return (response as List).map((item)=>  Post.fromMap(item)).toList();
+  }
 
   void _estaAtivo() async {
     if (!_ativo) {
