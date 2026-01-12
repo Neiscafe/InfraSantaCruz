@@ -12,8 +12,8 @@ class MyAppController {
 
   Future<List<Post>> buscaPosts()async{
     _estaAtivo();
-    final response= supabase.from('post').select();
-    return (response as List).map((item)=>  Post.fromMap(item)).toList();
+    final response= await supabase.from('posts').select();
+    return (response as List<dynamic>).map((item)=>  Post.fromMap(item)).toList();
   }
 
   void _estaAtivo() async {
