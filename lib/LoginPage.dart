@@ -17,12 +17,16 @@ class _LoginPageState extends State<LoginPage> {
 
   void checkAuth() {
     controller.onAuthChanged((data) {
-      final session = data.session;
-      if (session != null) {
-        // Usuário logado -> Vai para Home
-        Navigator.of(
-          context,
-        ).pushReplacement(MaterialPageRoute(builder: (_) => PermissaoPage()));
+      switch (data.event) {
+        case AuthChangeEvent.signedIn:
+          if (mounted) {
+            setState(() => _isLoading = false);
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => PermissaoPage()),
+            );
+          }
+          break;
+        default:
       }
     });
   }
@@ -33,26 +37,9 @@ class _LoginPageState extends State<LoginPage> {
     checkAuth();
   }
 
-  /// --- LOGIN OAUTH (Navegador) ---
-  Future<void> _handleOAuthLogin(OAuthProvider provider) async {
+  void _handleOAuthLogin(OAuthProvider provider) {
     setState(() => _isLoading = true);
-    try {
-      await controller.verificaAutenticacao(provider);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Erro ao entrar com ${provider.name}: $e"),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => PermissaoPage()),
-      );
-    }
+    controller.verificaAutenticacao(provider);
   }
 
   @override
