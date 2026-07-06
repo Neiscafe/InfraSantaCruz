@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/MyAppController.dart';
-import 'package:myapp/HomePage.dart';
 import 'package:myapp/PermissaoPage.dart';
-import 'package:myapp/SplashScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final controller = MyAppController();
@@ -51,9 +49,9 @@ class _LoginPageState extends State<LoginPage> {
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
-            Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (context) => PermissaoPage()));
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => PermissaoPage()),
+      );
     }
   }
 
@@ -103,11 +101,11 @@ class _LoginPageState extends State<LoginPage> {
 
                 // Botão Apple via OAuth
                 _buildSocialButton(
-                  label: "Continuar com Apple",
+                  label: "Continuar com Apple *Indisponível*",
                   icon: Icons.apple,
-                  color: Colors.black,
-                  textColor: Colors.white,
-                  onPressed: () => _handleOAuthLogin(OAuthProvider.apple),
+                  color: Colors.grey,
+                  textColor: Colors.black,
+                  onPressed: () => {},
                 ),
               ],
 
@@ -134,9 +132,11 @@ class _LoginPageState extends State<LoginPage> {
       width: double.infinity,
       height: 55,
       child: OutlinedButton.icon(
+        iconAlignment: IconAlignment.start,
         icon: Icon(icon, color: textColor, size: 30),
         label: Text(
           label,
+          textAlign: TextAlign.center,
           style: TextStyle(
             color: textColor,
             fontSize: 16,
