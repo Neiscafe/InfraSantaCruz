@@ -1,7 +1,6 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
-import 'package:myapp/LoginPage.dart';
-import 'package:flutter/material.dart';
+import 'package:myapp/PhotoMenuPage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'MyAppController.dart';
 import 'Post.dart';
@@ -29,10 +28,15 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Feed de Posts'),
-        centerTitle: true,
+      floatingActionButton: FloatingActionButton.large(
+        child: Icon(CupertinoIcons.add),
+        onPressed: () {
+          Navigator.of(
+            context,
+          ).pushReplacement(MaterialPageRoute(builder: (_) => PhotoMenuPage()));
+        },
       ),
+      appBar: AppBar(title: Text('Feed de Posts'), centerTitle: true),
       body: FutureBuilder<List<Post>>(
         future: _postsFuture,
         builder: (context, snapshot) {
@@ -43,7 +47,9 @@ class _HomePageState extends State<HomePage> {
 
           // 2. Se houver erro
           if (snapshot.hasError) {
-            return Center(child: Text('Erro ao carregar posts: ${snapshot.error}'));
+            return Center(
+              child: Text('Erro ao carregar posts: ${snapshot.error}'),
+            );
           }
 
           // 3. Se a lista estiver vazia
