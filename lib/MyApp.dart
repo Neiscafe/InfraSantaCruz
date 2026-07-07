@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/LoginPage.dart';
 import 'package:myapp/SplashScreen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    Supabase.initialize(
+      url: 'https://yombhmzdpmffekqhdtrv.supabase.co',
+      anonKey: 'sb_publishable_WnnTd11M1Lv_n5ookD45uQ_ZJYzav3l',
+    );
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
