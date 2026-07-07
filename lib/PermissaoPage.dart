@@ -8,7 +8,6 @@ class PermissaoPage extends StatefulWidget {
 }
 
 class _PermissaoPageState extends State<PermissaoPage> {
-
   // Função para solicitar todas as permissões de uma vez
   Future<void> _requestPermissions() async {
     ServiceStatus serviceStatus = await Permission.location.serviceStatus;
@@ -17,9 +16,14 @@ class _PermissaoPageState extends State<PermissaoPage> {
         context: context,
         builder: (context) => AlertDialog(
           title: Text("Ligue o GPS"),
-          content: Text("O app precisa do GPS ligado para usar sua localização em tempo real."),
+          content: Text(
+            "O app precisa do GPS ligado para usar sua localização em tempo real.",
+          ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: Text("Cancelar")),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text("Cancelar"),
+            ),
             TextButton(
               onPressed: () => {}, // Abre a tela de ajustes do celular
               child: Text("Ligar"),
@@ -56,11 +60,17 @@ class _PermissaoPageState extends State<PermissaoPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text("Permissões Necessárias"),
-        content: Text("O app precisa dessas permissões para funcionar. Deseja ir nas configurações habilitar manualmente?"),
+        content: Text(
+          "O app precisa dessas permissões para funcionar. Deseja ir nas configurações habilitar manualmente?",
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text("Cancelar")),
           TextButton(
-            onPressed: () => openAppSettings(), // Abre a tela de ajustes do celular
+            onPressed: () => Navigator.pop(context),
+            child: Text("Cancelar"),
+          ),
+          TextButton(
+            onPressed: () => openAppSettings(),
+            // Abre a tela de ajustes do celular
             child: Text("Configurações"),
           ),
         ],
@@ -90,15 +100,25 @@ class _PermissaoPageState extends State<PermissaoPage> {
               style: TextStyle(color: Colors.grey[600]),
             ),
             SizedBox(height: 40),
-            _buildPermissionItem(Icons.location_on, "Localização", "Para ver posts próximos"),
-            _buildPermissionItem(Icons.camera_alt, "Câmera e Vídeo", "Para registrar momentos"),
+            _buildPermissionItem(
+              Icons.location_on,
+              "Localização",
+              "Para ver posts próximos",
+            ),
+            _buildPermissionItem(
+              Icons.camera_alt,
+              "Câmera e Vídeo",
+              "Para registrar momentos",
+            ),
             _buildPermissionItem(Icons.mic, "Áudio", "Para capturar som"),
             Spacer(),
             ElevatedButton(
               onPressed: _requestPermissions,
               style: ElevatedButton.styleFrom(
                 minimumSize: Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               child: Text("CONCEDER PERMISSÕES"),
             ),
