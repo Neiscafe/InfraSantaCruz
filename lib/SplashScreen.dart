@@ -1,14 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:myapp/HomePage.dart';
-import 'dart:async';
-
 import 'package:myapp/LoginPage.dart';
-import 'package:myapp/PermissaoPage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-import 'MyAppController.dart';
-
-final controller = MyAppController();
 
 class SplashScreen extends StatefulWidget {
   @override
@@ -18,11 +11,10 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
-    controller.buscaSession();
     return StreamBuilder(
-      stream: MyAppController.supabase.auth.onAuthStateChange,
+      stream: Supabase.instance.client.auth.onAuthStateChange,
       builder: (context, snapshot) {
-        if(snapshot.connectionState==ConnectionState.waiting){
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return Scaffold(
             backgroundColor: Colors.white,
             body: Stack(
@@ -36,7 +28,9 @@ class _SplashScreenState extends State<SplashScreen> {
                       SizedBox(height: 24),
                       // Indicador de carregamento em Azul (cor da sua logo)
                       CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0056b3)),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Color(0xFF0056b3),
+                        ),
                       ),
                     ],
                   ),
@@ -60,7 +54,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
           );
         }
-        return snapshot.data?.session!=null ? HomePage() : LoginPage();
+        return snapshot.data?.session != null ? HomePage() : LoginPage();
       },
     );
   }
