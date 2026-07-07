@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:myapp/DisplayPictureScreen.dart';
 import 'package:myapp/TirarFotoPage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
-final controller = MyAppController();
+final postId = Uuid().v4();
 
 class PhotoMenuPage extends StatelessWidget {
   const PhotoMenuPage({super.key});
@@ -45,7 +46,7 @@ class PhotoMenuPage extends StatelessWidget {
               for (final imagem in data) {
                 final future = Supabase.instance.client.storage
                     .from('posts')
-                    .download('/teste1/' + imagem.name);
+                    .download('/$postId/${imagem.name}');
                 screenImages.add(
                   FutureBuilder(
                     future: future,
