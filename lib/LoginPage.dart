@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:myapp/MyAppController.dart';
 import 'package:myapp/PermissaoPage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-final controller = MyAppController();
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,31 +12,27 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
 
-  void checkAuth() {
-    controller.onAuthChanged((data) {
-      switch (data.event) {
-        case AuthChangeEvent.signedIn:
-          if (mounted) {
-            setState(() => _isLoading = false);
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => PermissaoPage()),
-            );
-          }
-          break;
-        default:
+  @override
+  void initState() {
+    super.initState();
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.signedIn && mounted) {
+        setState(() => _isLoading = false);
+        Navigator.of(
+          context,
+        ).pushReplacement(MaterialPageRoute(builder: (_) => PermissaoPage()));
       }
     });
   }
 
-  @override
-  void initState() {
-    super.initState();
-    checkAuth();
-  }
-
   void _handleOAuthLogin(OAuthProvider provider) {
     setState(() => _isLoading = true);
-    controller.verificaAutenticacao(provider);
+    Supabase.instance.client.auth.signInWithOAuth(
+      provider,
+      // O redirectTo deve ser o Deep Link configurado no seu app
+      // Exemplo: 'com.seunome.infrasantacruz://login-callback/'
+      redirectTo: 'io.infrasantacruz://login-callback/',
+    );
   }
 
   @override
