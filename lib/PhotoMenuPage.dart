@@ -1,9 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:myapp/DisplayPictureScreen.dart';
-import 'package:myapp/MyAppController.dart';
-import 'package:myapp/PermissaoPage.dart';
-import 'package:myapp/main.dart';
+import 'package:myapp/TirarFotoPage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final controller = MyAppController();
@@ -95,10 +93,10 @@ class PhotoMenuPage extends StatelessWidget {
         ),
         FilledButton(
           onPressed: () {
-            // Navigator.push(
-            //   context,
-            //   MaterialPageRoute(builder: (context) => PermissaoCameraPage()),
-            // );
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => TirarFotoPage()),
+            );
           },
           child: Text("Tirar foto"),
         ),
