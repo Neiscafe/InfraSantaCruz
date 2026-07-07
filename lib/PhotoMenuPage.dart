@@ -8,6 +8,7 @@ final controller = MyAppController();
 
 class PhotoMenuPage extends StatelessWidget {
   const PhotoMenuPage({super.key});
+
   void pickSingleFile(BuildContext context) async {
     FilePickerResult? result = await FilePicker.platform.pickFiles();
     if (result != null) {
@@ -27,7 +28,9 @@ class PhotoMenuPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final _future = controller.listaImagens('teste1');
+    final _future = Supabase.instance.client.storage
+        .from('posts')
+        .list(path: postId);
     return Column(
       mainAxisSize: MainAxisSize.max,
       mainAxisAlignment: MainAxisAlignment.start,
