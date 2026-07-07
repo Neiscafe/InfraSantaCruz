@@ -2,13 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:myapp/PhotoMenuPage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'MyAppController.dart';
 import 'Post.dart';
 
-
-final controller = MyAppController();
-
-// --- Página Principal ---
 class HomePage extends StatefulWidget {
   @override
   _HomePageState createState() => _HomePageState();
@@ -17,12 +12,11 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   // Armazenamos o Future em uma variável para evitar que ele seja
   // disparado novamente em cada rebuild do widget.
-  late Future<List<Post>> _postsFuture;
+  late final Future<List<Post>> _postsFuture = buscaPosts();
 
-  @override
-  void initState() {
-    super.initState();
-    _postsFuture = controller.buscaPosts();
+  Future<List<Post>> buscaPosts() async {
+    final response = await Supabase.instance.client.from('posts').select();
+    return response.map((item) => Post.fromMap(item)).toList();
   }
 
   @override
