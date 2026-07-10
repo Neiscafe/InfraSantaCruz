@@ -2,14 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:myapp/HomePage.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-class PermissaoPage extends StatefulWidget {
-  @override
-  _PermissaoPageState createState() => _PermissaoPageState();
-}
+class PermissaoPage extends StatelessWidget {
+  const PermissaoPage({super.key});
 
-class _PermissaoPageState extends State<PermissaoPage> {
-  // Função para solicitar todas as permissões de uma vez
-  Future<void> _requestPermissions() async {
+  Future<void> pedePermissoes(BuildContext context) async {
     ServiceStatus serviceStatus = await Permission.location.serviceStatus;
     if (serviceStatus.isDisabled) {
       showDialog(
@@ -40,7 +36,6 @@ class _PermissaoPageState extends State<PermissaoPage> {
       // Nota: No permission_handler, Vídeo é coberto por Camera + Microfone
     ].request();
 
-    // Verifica se todas foram aceitas
     bool allGranted = statuses.values.every((status) => status.isGranted);
 
     if (allGranted) {
@@ -51,11 +46,11 @@ class _PermissaoPageState extends State<PermissaoPage> {
         context,
       ).pushReplacement(MaterialPageRoute(builder: (_) => HomePage()));
     } else {
-      _showPermissionDeniedDialog();
+      erroPermissoesNegadas(context);
     }
   }
 
-  void _showPermissionDeniedDialog() {
+  void erroPermissoesNegadas(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -113,7 +108,7 @@ class _PermissaoPageState extends State<PermissaoPage> {
             _buildPermissionItem(Icons.mic, "Áudio", "Para capturar som"),
             Spacer(),
             ElevatedButton(
-              onPressed: _requestPermissions,
+              onPressed: () => pedePermissoes(context),
               style: ElevatedButton.styleFrom(
                 minimumSize: Size(double.infinity, 50),
                 shape: RoundedRectangleBorder(
