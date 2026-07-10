@@ -1,38 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:myapp/PermissaoPage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+import 'AuthRepository.dart';
 
-  @override
-  State<LoginPage> createState() => _LoginPageState();
-}
+class LoginPage extends StatelessWidget {
+  final Stream<AuthState> stream;
 
-class _LoginPageState extends State<LoginPage> {
-  bool _isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (data.event == AuthChangeEvent.signedIn && mounted) {
-        setState(() => _isLoading = false);
-        Navigator.of(
-          context,
-        ).pushReplacement(MaterialPageRoute(builder: (_) => PermissaoPage()));
-      }
-    });
-  }
+  LoginPage({Stream<AuthState>? authStream, super.key})
+    : stream = authStream ?? AuthRepository.onAuthStateChange;
 
   void _handleOAuthLogin(OAuthProvider provider) {
-    setState(() => _isLoading = true);
-    Supabase.instance.client.auth.signInWithOAuth(
-      provider,
-      // O redirectTo deve ser o Deep Link configurado no seu app
-      // Exemplo: 'com.seunome.infrasantacruz://login-callback/'
-      redirectTo: 'io.infrasantacruz://login-callback/',
-    );
+    AuthRepository.signInWithOAuth(provider);
   }
 
   @override
@@ -65,30 +43,44 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 50),
 
-              if (_isLoading)
-                const CircularProgressIndicator()
-              else ...[
-                // Botão Google via OAuth
-                _buildSocialButton(
-                  label: "Continuar com Google",
-                  icon: Icons.g_mobiledata,
-                  color: Colors.white,
-                  textColor: Colors.black87,
-                  onPressed: () => _handleOAuthLogin(OAuthProvider.google),
-                ),
+              StreamBuilder(
+                stream: stream,
+                builder: (context, snapshot) {
+                  // Loading
+                  // ConnectionState.waiting
+                  // ConnectionState.active(AuthChangeEvent.initialSession(session: session)
+                  // ConnectionState.active(AuthChangeEvent.signedIn(session: session)
 
-                const SizedBox(height: 16),
-
-                // Botão Apple via OAuth
-                _buildSocialButton(
-                  label: "Continuar com Apple *Indisponível*",
-                  icon: Icons.apple,
-                  color: Colors.grey,
-                  textColor: Colors.black,
-                  onPressed: () => {},
-                ),
-              ],
-
+                  // Botões
+                  // ConnectionState.active(AuthChangeEvent.initialSession(session: null)
+                  // ConnectionState.active(AuthChangeEvent.signedOut(session: null)
+                  if (snapshot.connectionState != ConnectionState.active ||
+                      snapshot.data?.session != null) {
+                    return const CircularProgressIndicator();
+                  } else {
+                    return Column(
+                      children: [
+                        _buildSocialButton(
+                          label: "Continuar com Google",
+                          icon: Icons.g_mobiledata,
+                          color: Colors.white,
+                          textColor: Colors.black87,
+                          onPressed: () =>
+                              _handleOAuthLogin(OAuthProvider.google),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildSocialButton(
+                          label: "Continuar com Apple *Indisponível*",
+                          icon: Icons.apple,
+                          color: Colors.grey,
+                          textColor: Colors.black,
+                          onPressed: () => {},
+                        ),
+                      ],
+                    );
+                  }
+                },
+              ),
               const SizedBox(height: 50),
               const Text(
                 "Acesse utilizando os provedores oficiais",
