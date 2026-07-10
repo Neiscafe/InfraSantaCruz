@@ -1,18 +1,59 @@
 import 'package:flutter/material.dart';
+import 'package:myapp/AuthRepository.dart';
 import 'package:myapp/HomePage.dart';
 import 'package:myapp/LoginPage.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'PermissaoPage.dart';
+
 class SplashScreen extends StatefulWidget {
+  final Stream<AuthState> stream;
+
+  SplashScreen({Stream<AuthState>? stream, super.key})
+    : stream = stream ?? AuthRepository.onAuthStateChange;
+
   @override
-  _SplashScreenState createState() => _SplashScreenState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen> {
   @override
+  void initState() {
+    super.initState();
+    AuthRepository.onAuthStateChange.listen((authState) {
+      if (authState.session == null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) {
+              return LoginPage();
+            },
+          ),
+        );
+        return;
+      }
+      verificaPermissoes(context).then((concedidas) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) {
+              if (concedidas) {
+                return HomePage();
+              } else {
+                return PermissaoPage();
+              }
+            },
+          ),
+        );
+      });
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: Supabase.instance.client.auth.onAuthStateChange,
+      stream: widget.stream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Scaffold(
@@ -53,9 +94,18 @@ class _SplashScreenState extends State<SplashScreen> {
               ],
             ),
           );
+        } else {
+          return Placeholder();
         }
-        return snapshot.data?.session != null ? HomePage() : LoginPage();
       },
     );
+  }
+
+  Future<bool> verificaPermissoes(BuildContext context) async {
+    ServiceStatus serviceStatus = await Permission.location.serviceStatus;
+    final location = await Permission.location.isGranted;
+    final camera = await Permission.camera.isGranted;
+    final microphone = await Permission.microphone.isGranted;
+    return serviceStatus.isEnabled && location && camera && microphone;
   }
 }
