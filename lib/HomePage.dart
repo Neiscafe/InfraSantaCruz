@@ -1,23 +1,14 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:myapp/PhotoMenuPage.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:myapp/PostsRepository.dart';
 import 'Post.dart';
 
-class HomePage extends StatefulWidget {
-  @override
-  _HomePageState createState() => _HomePageState();
-}
+class HomePage extends StatelessWidget {
+  final Future<List<Post>> future;
 
-class _HomePageState extends State<HomePage> {
-  // Armazenamos o Future em uma variável para evitar que ele seja
-  // disparado novamente em cada rebuild do widget.
-  late final Future<List<Post>> _postsFuture = buscaPosts();
-
-  Future<List<Post>> buscaPosts() async {
-    final response = await Supabase.instance.client.from('posts').select();
-    return response.map((item) => Post.fromMap(item)).toList();
-  }
+  HomePage({Future<List<Post>> Function() buscaPosts = PostsRepository
+      .buscaPosts, super.key}) : future = buscaPosts();
 
   @override
   Widget build(BuildContext context) {
@@ -25,14 +16,17 @@ class _HomePageState extends State<HomePage> {
       floatingActionButton: FloatingActionButton.large(
         child: Icon(CupertinoIcons.add),
         onPressed: () {
-          Navigator.of(
-            context,
-          ).pushReplacement(MaterialPageRoute(builder: (_) => PhotoMenuPage()));
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) =>
+                  PhotoMenuPage(),
+            ),
+          );
         },
       ),
       appBar: AppBar(title: Text('Feed de Posts'), centerTitle: true),
       body: FutureBuilder<List<Post>>(
-        future: _postsFuture,
+        future: future,
         builder: (context, snapshot) {
           // 1. Enquanto carrega
           if (snapshot.connectionState == ConnectionState.waiting) {
