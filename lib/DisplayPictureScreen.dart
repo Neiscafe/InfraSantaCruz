@@ -1,34 +1,26 @@
 import 'dart:io';
 
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:myapp/PostsRepository.dart';
 
 class DisplayPictureScreen extends StatelessWidget {
   final String imagePath;
-  final File file;
+  final XFile file;
+
   DisplayPictureScreen({super.key, required this.imagePath})
-    : file = File(imagePath);
+    : file = XFile(imagePath);
 
   @override
   Widget build(BuildContext context) {
     final children = [
-      Image.file(file),
+      Image.file(File(file.path)),
       Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           FilledButton(
             onPressed: () async {
-              final now = DateTime.now().toString();
-              final result = await Supabase.instance.client.storage
-                  .from('posts')
-                  .upload('teste1/$now', File(file.path));
-              if (!context.mounted) {
-                return;
-              }
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(result)));
-              sleep(Duration(seconds: 2));
+              PostsRepository.adicionaImagem(file);
               Navigator.pop(context);
             },
             child: Text("Enviar esta foto"),
