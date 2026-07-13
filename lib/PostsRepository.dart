@@ -20,18 +20,18 @@ class PostsRepository {
   //     StreamController();
 
   // static Stream<List<XFile>> get ongoingPostImages => _ongoingPostImages.stream;
-  static List<XFile> ongoingPostImages = [];
+  static List<XFile> midiasPost = [];
 
-  static void adicionaImagem(XFile imagem) async {
+  static void adicionaMidia(XFile midia) async {
     // final currentList = (await _ongoingPostImages.stream.toList()).last;
     // currentList.add(imagem);
     // _ongoingPostImages.add(currentList);
-    ongoingPostImages.add(imagem);
+    midiasPost.add(midia);
   }
 
   static void removeImagem(XFile imagem) async {
     // final currentList = (await _ongoingPostImages.stream.toList()).last;
-    ongoingPostImages.remove(imagem);
+    midiasPost.remove(imagem);
     // _ongoingPostImages.add(currentList);
   }
 

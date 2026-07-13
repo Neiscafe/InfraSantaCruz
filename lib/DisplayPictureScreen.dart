@@ -6,37 +6,43 @@ import 'package:myapp/PostsRepository.dart';
 
 class DisplayPictureScreen extends StatelessWidget {
   final String imagePath;
+  final bool readOnly;
   final XFile file;
 
-  DisplayPictureScreen({super.key, required this.imagePath})
-    : file = XFile(imagePath);
+  DisplayPictureScreen({super.key, required this.imagePath, bool? readOnly})
+    : file = XFile(imagePath),
+      readOnly = readOnly ?? false;
 
   @override
   Widget build(BuildContext context) {
-    final children = [
-      Image.file(File(file.path)),
-      Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+    return Scaffold(
+      appBar: AppBar(title: const Text('Ver Foto')),
+      body: Stack(
         children: [
-          FilledButton(
-            onPressed: () async {
-              PostsRepository.adicionaImagem(file);
-              Navigator.pop(context);
-            },
-            child: Text("Enviar esta foto"),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.pop(context);
-            },
-            child: Text('Voltar'),
+          Stack(
+            children: [
+              Image.file(File(file.path)),
+              if (!readOnly)
+                Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Align(
+                    alignment: Alignment.bottomRight,
+                    child: FilledButton(
+                      onPressed: () async {
+                        PostsRepository.adicionaMidia(file);
+                        Navigator.pop(context);
+                      },
+                      style: FilledButton.styleFrom(
+                        padding: EdgeInsets.fromLTRB(20, 16, 20, 16),
+                      ),
+                      child: Text("Enviar esta foto"),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
-    ];
-    return Scaffold(
-      appBar: AppBar(title: const Text('Display the Picture')),
-      body: Stack(children: children),
     );
   }
 }

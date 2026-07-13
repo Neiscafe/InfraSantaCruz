@@ -8,8 +8,10 @@ import 'PostsRepository.dart';
 
 class DisplayVideoScreen extends StatefulWidget {
   final String imagePath;
+  final bool readOnly;
 
-  const DisplayVideoScreen({super.key, required this.imagePath});
+  const DisplayVideoScreen({super.key, required this.imagePath, bool? readOnly})
+    : readOnly = readOnly ?? false;
 
   @override
   State<DisplayVideoScreen> createState() => _DisplayVideoScreenState();
@@ -35,55 +37,61 @@ class _DisplayVideoScreenState extends State<DisplayVideoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: _initializeVideoPlayerFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.done) {
-          return Stack(
-            children: [
-              AspectRatio(
-                aspectRatio: _controller.value.aspectRatio,
-                child: GestureDetector(
-                  child: VideoPlayer(_controller),
-                  onTap: () {
-                    if (!_controller.value.isPlaying) {
-                      _controller.play();
-                      setState(() {
-                        _videoRodando = true;
-                      });
-                    } else {
-                      _controller.pause();
-                      setState(() {
-                        _videoRodando = false;
-                      });
-                    }
-                  },
+    return Scaffold(
+      appBar: AppBar(title: const Text('Ver Vídeo')),
+      body: FutureBuilder(
+        future: _initializeVideoPlayerFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            return Stack(
+              children: [
+                AspectRatio(
+                  aspectRatio: _controller.value.aspectRatio,
+                  child: GestureDetector(
+                    child: VideoPlayer(_controller),
+                    onTap: () {
+                      if (!_controller.value.isPlaying) {
+                        _controller.play();
+                        setState(() {
+                          _videoRodando = true;
+                        });
+                      } else {
+                        _controller.pause();
+                        setState(() {
+                          _videoRodando = false;
+                        });
+                      }
+                    },
+                  ),
                 ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  FilledButton(
-                    onPressed: () async {
-                      PostsRepository.adicionaImagem(XFile(widget.imagePath));
-                      Navigator.pop(context);
-                    },
-                    child: Text("Enviar esta foto"),
+                if (!widget.readOnly)
+                  Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Align(
+                      alignment: Alignment.bottomRight,
+                      child: FilledButton(
+                        onPressed: () async {
+                          PostsRepository.adicionaMidia(
+                            XFile(widget.imagePath),
+                          );
+                          Navigator.pop(context);
+                        },
+                        style: FilledButton.styleFrom(
+                          padding: EdgeInsets.fromLTRB(20, 16, 20, 16),
+                        ),
+                        child: Text("Enviar este vídeo"),
+                      ),
+                    ),
                   ),
-                  FilledButton(
-                    onPressed: () async {
-                      Navigator.pop(context);
-                    },
-                    child: Text('Voltar'),
-                  ),
-                ],
-              ),
-            ],
-          );
-        } else {
-          return const Center(child: CircularProgressIndicator());
-        }
-      },
+                if (!_videoRodando)
+                  Center(child: Icon(Icons.play_arrow, color: Colors.white)),
+              ],
+            );
+          } else {
+            return const Center(child: CircularProgressIndicator());
+          }
+        },
+      ),
     );
   }
 }

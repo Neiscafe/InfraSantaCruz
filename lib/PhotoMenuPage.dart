@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:camera/camera.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -10,8 +8,8 @@ import 'package:myapp/DisplayPictureScreen.dart';
 import 'package:myapp/PostsRepository.dart';
 import 'package:myapp/SeletorLocalizacao.dart';
 import 'package:myapp/TirarFotoPage.dart';
+import 'package:myapp/VideoThumbnailWidget.dart';
 import 'package:uuid/uuid.dart';
-import 'package:video_player/video_player.dart';
 
 import 'Post.dart';
 
@@ -91,131 +89,150 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
   @override
   void initState() {
     super.initState();
+    medias = PostsRepository.midiasPost;
     usaLocalizacaoAtual();
   }
 
   @override
+  void dispose() {
+    medias = [];
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    medias = PostsRepository.ongoingPostImages;
     return Scaffold(
       appBar: AppBar(title: Text("Criar uma publicação")),
       floatingActionButton: buildFloatingActionButton(context),
-      body: Material(
-        child: Expanded(
-          child: Stack(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Fotos e evidências"),
-                  lazyImageList(context, medias),
-                  Row(
-                    children: [
-                      FilledButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => TirarFotoPage(),
-                            ),
-                          );
-                        },
-                        child: Text("Tirar foto"),
-                      ),
-                      TextButton(
-                        onPressed: () => pickSingleFile(context),
-                        child: Text("Anexar"),
-                      ),
-                    ],
-                  ),
-
-                  TextField(
-                    textCapitalization: TextCapitalization.sentences,
-                    maxLines: null,
-                    minLines: null,
-                    maxLength: 200,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: "Título do post",
-                    ),
-                    onChanged: (text) {
-                      _updateValues(titulo: text);
-                    },
-                  ),
-                  TextField(
-                    textCapitalization: TextCapitalization.sentences,
-                    maxLength: 1000,
-                    maxLines: null,
-                    minLines: null,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: "Descrição detalhada",
-                    ),
-                    onChanged: (text) {
-                      _updateValues(descricao: text);
-                    },
-                  ),
-                  Text("Localização"),
-                  Row(
-                    children: [
-                      FilledButton(
-                        onPressed: () {
-                          usaLocalizacaoAtual();
-                        },
-                        child: Row(
-                          children: [
-                            Icon(Icons.location_on),
-                            Text("Local atual"),
-                          ],
-                        ),
-                      ),
-                      FilledButton(
-                        onPressed: () async {
-                          final currentLocation =
-                              await LocationService.getCurrentPosition();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => SeletorLocalizacao(
-                                latLong: currentLocation,
-                                onPicked: (PickedData pickedData) {
-                                  _updateValues(
-                                    jsonEndereco: pickedData.addressData,
-                                    lon: pickedData.latLong.longitude,
-                                    lat: pickedData.latLong.latitude,
-                                  );
-                                },
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 10, 20, 0),
+        child: Material(
+          child: Expanded(
+            child: Stack(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Fotos e evidências"),
+                    lazyImageList(context, medias),
+                    Row(
+                      children: [
+                        FilledButton(
+                          onPressed: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => TirarFotoPage(),
                               ),
-                            ),
-                          );
-                        },
-                        child: Row(
-                          children: [
-                            Icon(Icons.my_location),
-                            Text("Selecionar no mapa"),
-                          ],
+                            );
+                            setState(() {
+                              medias = PostsRepository.midiasPost;
+                            });
+                          },
+                          child: Row(
+                            children: [
+                              Icon(Icons.photo_camera_front_outlined),
+                              Text("Capturar"),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  Text(this.labelLocalizacao),
-                  TextField(
-                    textCapitalization: TextCapitalization.sentences,
-                    maxLines: null,
-                    minLines: null,
-                    maxLength: 200,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: "Referência do local",
+                        FilledButton(
+                          onPressed: () => pickSingleFile(context),
+                          child: Row(
+                            children: [Icon(Icons.attach_file), Text("Anexar")],
+                          ),
+                        ),
+                      ],
                     ),
-                    onChanged: (text) {
-                      referenciaLocalizacao = text;
-                    },
-                  ),
-                ],
-              ),
-              if (_loading) Center(child: CircularProgressIndicator()),
-            ],
+
+                    TextField(
+                      textCapitalization: TextCapitalization.sentences,
+                      maxLines: null,
+                      minLines: null,
+                      maxLength: 200,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: "Título do post",
+                      ),
+                      onChanged: (text) {
+                        _updateValues(titulo: text);
+                      },
+                    ),
+                    TextField(
+                      textCapitalization: TextCapitalization.sentences,
+                      maxLength: 1000,
+                      maxLines: null,
+                      minLines: null,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: "Descrição detalhada",
+                      ),
+                      onChanged: (text) {
+                        _updateValues(descricao: text);
+                      },
+                    ),
+                    Text("Localização"),
+                    Row(
+                      children: [
+                        FilledButton(
+                          onPressed: () {
+                            usaLocalizacaoAtual();
+                          },
+                          child: Row(
+                            children: [
+                              Icon(Icons.location_on),
+                              Text("Local atual"),
+                            ],
+                          ),
+                        ),
+                        FilledButton(
+                          onPressed: () async {
+                            final currentLocation =
+                                await LocationService.getCurrentPosition();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SeletorLocalizacao(
+                                  latLong: currentLocation,
+                                  onPicked: (PickedData pickedData) {
+                                    _updateValues(
+                                      jsonEndereco: pickedData.addressData,
+                                      lon: pickedData.latLong.longitude,
+                                      lat: pickedData.latLong.latitude,
+                                    );
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                          child: Row(
+                            children: [
+                              Icon(Icons.my_location),
+                              Text("Selecionar no mapa"),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(this.labelLocalizacao),
+                    TextField(
+                      textCapitalization: TextCapitalization.sentences,
+                      maxLines: null,
+                      minLines: null,
+                      maxLength: 200,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: "Referência do local",
+                      ),
+                      onChanged: (text) {
+                        referenciaLocalizacao = text;
+                      },
+                    ),
+                  ],
+                ),
+                if (_loading) Center(child: CircularProgressIndicator()),
+              ],
+            ),
           ),
         ),
       ),
@@ -265,15 +282,12 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
       height: medias.isEmpty ? 0 : 80,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        children: images.map((image) => lazyImageWidget(image)).toList(),
+        children: images.map((image) => lazyMediaWidget(image)).toList(),
       ),
     );
   }
 
-  Widget lazyImageWidget(XFile file) {
-    // final future = Supabase.instance.client.storage
-    //     .from('posts')
-    //     .download('/$postId/${imagem.name}');
+  Widget lazyMediaWidget(XFile file) {
     return FutureBuilder(
       future: file.readAsBytes(),
       builder: (context, snapshot) {
@@ -282,9 +296,18 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
         if (snapshot.hasData) {
           try {
             if (mimeType?.contains("image") == true) {
-              child = Image.memory(snapshot.data!);
+              child = GestureDetector(
+                child: Image.memory(snapshot.data!, fit: BoxFit.fill,),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        DisplayPictureScreen(imagePath: file.path, readOnly: true,),
+                  ),
+                ),
+              );
             } else if (mimeType?.contains("video") == true) {
-              child = VideoPlayer(VideoPlayerController.file(File(file.path)));
+              child = VideoThumbnailWidget(file: file);
             } else {
               child = Container(color: Colors.grey);
             }
