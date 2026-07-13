@@ -73,7 +73,7 @@ class HomePage extends StatelessWidget {
           child: Icon(Icons.pin_drop, color: Colors.white),
         ),
         title: Text(
-          post.title,
+          post.titulo,
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         subtitle: Padding(
@@ -84,7 +84,7 @@ class HomePage extends StatelessWidget {
               SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  post.location,
+                  post.referenciaLocalizacao,
                   style: TextStyle(color: Colors.grey[700]),
                 ),
               ),

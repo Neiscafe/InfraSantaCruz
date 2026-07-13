@@ -3,8 +3,6 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:location_picker_flutter_map/location_picker_flutter_map.dart';
 import 'package:mime/mime.dart';
 import 'package:myapp/Consts.dart';
@@ -31,23 +29,29 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
   bool _canFinish = false;
   String title = "";
   String description = "";
-  String location = "";
+  String referenciaLocalizacao = "";
   double? lon;
   double? lat;
+  String labelLocalizacao = "";
+  Map<String, dynamic>? jsonEndereco;
   List<XFile> medias = [];
 
   void _updateValues({
-    String? title,
-    String? description,
-    String? location,
+    String? titulo,
+    String? descricao,
     double? lon,
     double? lat,
+    Map<String, dynamic>? jsonEndereco,
   }) {
-    title != null ? this.title = title : null;
-    description != null ? this.description = description : null;
-    location != null ? this.location = location : null;
+    titulo != null ? this.title = titulo : null;
+    descricao != null ? this.description = descricao : null;
     lon != null ? this.lon = lon : null;
     lat != null ? this.lat = lat : null;
+    if (jsonEndereco != null) {
+      this.jsonEndereco = jsonEndereco;
+      labelLocalizacao =
+          "${jsonEndereco['postcode']}, ${jsonEndereco['road']}, ${jsonEndereco['suburb'] ?? jsonEndereco['neighbourhood'] ?? jsonEndereco['district']}, ${jsonEndereco['city']} ";
+    }
     validaCampos();
   }
 
@@ -57,7 +61,8 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
         title.isNotEmpty &&
         description.isNotEmpty &&
         lon != null &&
-        lat != null;
+        lat != null &&
+        jsonEndereco != null;
     setState(() {
       _canFinish = camposValidados;
     });
@@ -66,16 +71,32 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
   Post instanciaPost() {
     return Post(
       id: widget.postId,
-      title: title,
-      description: description,
-      location: location,
+      titulo: title,
+      descricao: description,
+      referenciaLocalizacao: referenciaLocalizacao,
       lon: lon!,
       lat: lat!,
+      rua: jsonEndereco?['road'] ?? '',
+      bairro:
+          jsonEndereco?['suburb'] ??
+          jsonEndereco?['neighbourhood'] ??
+          jsonEndereco?['district'] ??
+          '',
+      cidade: jsonEndereco?['city'] ?? '',
+      cep: jsonEndereco?['postcode'] ?? '',
+      jsonEndereco: jsonEndereco.toString(),
     );
   }
 
   @override
+  void initState() {
+    super.initState();
+    usaLocalizacaoAtual();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    medias = PostsRepository.ongoingPostImages;
     return Scaffold(
       appBar: AppBar(title: Text("Criar uma publicação")),
       floatingActionButton: buildFloatingActionButton(context),
@@ -87,12 +108,7 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text("Fotos e evidências"),
-                  StreamBuilder(
-                    stream: Stream.value(PostsRepository.ongoingPostImages),
-                    builder: (context, snapshot) =>
-                        lazyImageList(context, snapshot.data ?? List.empty()),
-                  ),
-
+                  lazyImageList(context, medias),
                   Row(
                     children: [
                       FilledButton(
@@ -122,6 +138,9 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
                       border: OutlineInputBorder(),
                       hintText: "Título do post",
                     ),
+                    onChanged: (text) {
+                      _updateValues(titulo: text);
+                    },
                   ),
                   TextField(
                     textCapitalization: TextCapitalization.sentences,
@@ -132,36 +151,16 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
                       border: OutlineInputBorder(),
                       hintText: "Descrição detalhada",
                     ),
+                    onChanged: (text) {
+                      _updateValues(descricao: text);
+                    },
                   ),
                   Text("Localização"),
                   Row(
                     children: [
                       FilledButton(
-                        onPressed: () async {
-                          final position = await Geolocator.getCurrentPosition(
-                            locationSettings: const LocationSettings(
-                              accuracy: LocationAccuracy.best,
-                            ),
-                          );
-                          final placemarks = await placemarkFromCoordinates(
-                            position.latitude,
-                            position.longitude,
-                          );
-                          if (placemarks.isEmpty) {
-                            _updateValues(
-                              lon: position.longitude,
-                              lat: position.latitude,
-                              location: "Local desconhecido",
-                            );
-                          } else {
-                            final place = placemarks[0];
-                            _updateValues(
-                              lon: position.longitude,
-                              lat: position.latitude,
-                              location:
-                                  "${place.street} ${place.subLocality} ${place.name}, ${place.postalCode}",
-                            );
-                          }
+                        onPressed: () {
+                          usaLocalizacaoAtual();
                         },
                         child: Row(
                           children: [
@@ -171,13 +170,17 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
                         ),
                       ),
                       FilledButton(
-                        onPressed: () {
+                        onPressed: () async {
+                          final currentLocation =
+                              await LocationService.getCurrentPosition();
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => SeletorLocalizacao(
+                                latLong: currentLocation,
                                 onPicked: (PickedData pickedData) {
                                   _updateValues(
+                                    jsonEndereco: pickedData.addressData,
                                     lon: pickedData.latLong.longitude,
                                     lat: pickedData.latLong.latitude,
                                   );
@@ -195,7 +198,20 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
                       ),
                     ],
                   ),
-                  Text(location),
+                  Text(this.labelLocalizacao),
+                  TextField(
+                    textCapitalization: TextCapitalization.sentences,
+                    maxLines: null,
+                    minLines: null,
+                    maxLength: 200,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: "Referência do local",
+                    ),
+                    onChanged: (text) {
+                      referenciaLocalizacao = text;
+                    },
+                  ),
                 ],
               ),
               if (_loading) Center(child: CircularProgressIndicator()),
@@ -203,6 +219,23 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
           ),
         ),
       ),
+    );
+  }
+
+  void usaLocalizacaoAtual() async {
+    final currentLocation = await LocationService.getCurrentPosition();
+    final geocodingService = GeocodingService(
+      nominatimHost: 'nominatim.openstreetmap.org',
+      language: 'pt',
+      userAgent: 'InfraSantaCruz/1.0',
+    );
+    final reverseGeocode = await geocodingService.reverseGeocode(
+      currentLocation,
+    );
+    _updateValues(
+      lon: currentLocation.longitude,
+      lat: currentLocation.latitude,
+      jsonEndereco: reverseGeocode.addressData,
     );
   }
 
@@ -228,18 +261,12 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
   }
 
   Widget lazyImageList<T>(BuildContext context, List<XFile> images) {
-    final size = MediaQuery.of(context).size;
-    return Column(
-      mainAxisSize: MainAxisSize.max,
-      children: [
-        SizedBox(
-          height: size.width / 2,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: images.map((image) => lazyImageWidget(image)).toList(),
-          ),
-        ),
-      ],
+    return SizedBox(
+      height: medias.isEmpty ? 0 : 80,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: images.map((image) => lazyImageWidget(image)).toList(),
+      ),
     );
   }
 
