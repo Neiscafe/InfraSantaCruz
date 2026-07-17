@@ -76,6 +76,16 @@
 			<string>UIInterfaceOrientationLandscapeLeft</string>
 			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
+		<key>BGTaskSchedulerPermittedIdentifiers</key>
+        <array>
+         <string>task-identifier</string>
+         <string>br.com.infrasantacruz.app.RefreshPosts</string>
+        </array>
+		<key>UIBackgroundModes</key>
+        <array>
+        	<string>processing</string>
+        	<string>fetch</string>
+        </array>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>
 		<key>UIApplicationSupportsIndirectInputEvents</key>

@@ -6,6 +6,8 @@ class AuthRepository {
       Supabase.instance.client.auth.onAuthStateChange;
   static final auth = Supabase.instance.client.auth;
 
+  static Session? get session => auth.currentSession;
+
   static Future<void> signInWithOAuth(OAuthProvider provider) async {
     const webClientId =
         '331259660582-rm2737abqodpus6cukjokpegi585j66t.apps.googleusercontent.com';

@@ -2,13 +2,17 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:myapp/DisplayVideoScreen.dart';
 import 'package:video_player/video_player.dart';
 
 class VideoThumbnailWidget extends StatefulWidget {
   final XFile file;
+  final void Function(XFile file) onTap;
 
-  const VideoThumbnailWidget({super.key, required this.file});
+  const VideoThumbnailWidget({
+    super.key,
+    required this.file,
+    required this.onTap,
+  });
 
   @override
   State<VideoThumbnailWidget> createState() => _VideoThumbnailWidgetState();
@@ -22,15 +26,7 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
     if (_videoController?.value.isInitialized == true) {
       return GestureDetector(
         child: VideoPlayer(_videoController!),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  DisplayVideoScreen(imagePath: widget.file.path),
-            ),
-          );
-        },
+        onTap: () => widget.onTap(widget.file),
       );
     } else {
       return CircularProgressIndicator();

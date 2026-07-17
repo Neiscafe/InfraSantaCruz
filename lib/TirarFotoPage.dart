@@ -26,6 +26,7 @@ class _TirarFotoPageState extends State<TirarFotoPage>
   int _pointers = 0;
   XFile? _pendingFile;
   bool _gravando = false;
+  String erro = "";
 
   Widget cameraElement(BuildContext context) {
     double _ = MediaQuery.of(context).size.width;
@@ -117,8 +118,8 @@ class _TirarFotoPageState extends State<TirarFotoPage>
         ],
       );
     } else {
-      startCamera();
-      return Center(child: Text("Carregando..."));
+      // startCamera();
+      return Center(child: Text(erro));
     }
   }
 
@@ -149,7 +150,9 @@ class _TirarFotoPageState extends State<TirarFotoPage>
         _cameraStarted = true;
       });
     } catch (e) {
-      print(e);
+      setState(() {
+        erro = e.toString();
+      });
     }
   }
 
@@ -264,6 +267,7 @@ class _TirarFotoPageState extends State<TirarFotoPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    startCamera();
   }
 
   @override
