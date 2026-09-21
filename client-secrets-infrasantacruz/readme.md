@@ -1,0 +1,3 @@
+client_secret_331259660582-rm2737abqodpus6cukjokpegi585j66t.apps.googleusercontent.com - Servidor Web
+client_secret_331259660582-8vq7o6esuhp7o830nu1g611h3m8t9ojf.apps.googleusercontent.com - Aplicativo Android
+client_331259660582-p9gbvr7ptdes9okve2m7vk2ont170379.apps.googleusercontent.com - Aplicativo iOS

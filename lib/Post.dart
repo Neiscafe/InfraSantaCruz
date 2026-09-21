@@ -1,6 +1,8 @@
 import 'dart:convert';
 
-import 'package:myapp/AuthRepository.dart';
+import 'package:flutter/foundation.dart';
+
+import 'Usuario.dart';
 
 class PostMidia {
   final String publicUrl;
@@ -9,6 +11,7 @@ class PostMidia {
   PostMidia({required this.publicUrl, required this.mime});
 
   static PostMidia fromMap(Map<String, dynamic> map) {
+    debugPrint(jsonEncode(map));
     return PostMidia(publicUrl: map['public_url'], mime: map['mime']);
   }
 
@@ -26,13 +29,15 @@ class Post {
   final double lat;
   final int totalCurtidas;
   final bool curtidoPorMim;
+  final int totalComentarios;
   final String rua;
   final String bairro;
   final String cidade;
   final String cep;
   final String jsonEndereco;
   final List<PostMidia> jsonMidias;
-  final String usuarioId;
+  final Usuario usuario;
+  final String createdAt;
 
   Post({
     required this.id,
@@ -47,10 +52,12 @@ class Post {
     required this.cep,
     required this.jsonEndereco,
     required this.jsonMidias,
-    String? usuarioId,
+    required this.createdAt,
+    required this.usuario,
     this.totalCurtidas = 0,
     this.curtidoPorMim = false,
-  }) : usuarioId = usuarioId ??= AuthRepository.session!.user.id;
+    this.totalComentarios = 0,
+  });
 
   Post copy({
     String? id,
@@ -65,7 +72,11 @@ class Post {
     String? cep,
     String? jsonEndereco,
     List<PostMidia>? jsonMidias,
-    String? usuarioId,
+    String? createdAt,
+    Usuario? usuario,
+    bool? curtidoPorMim,
+    int? totalCurtidas,
+    int? totalComentarios,
   }) {
     return Post(
       id: id ?? this.id,
@@ -81,41 +92,49 @@ class Post {
       cep: cep ?? this.cep,
       jsonEndereco: jsonEndereco ?? this.jsonEndereco,
       jsonMidias: jsonMidias ?? this.jsonMidias,
+      createdAt: createdAt ?? this.createdAt,
+      curtidoPorMim: curtidoPorMim ?? this.curtidoPorMim,
+      usuario: usuario ?? this.usuario,
+      totalCurtidas: totalCurtidas ?? this.totalCurtidas,
+      totalComentarios: totalComentarios ?? this.totalComentarios,
     );
   }
 
-  factory Post.fromMap(Map<String, dynamic> map) {
-    return Post(
-      id: map['post_id'],
-      titulo: map['titulo'],
-      referenciaLocalizacao: map['referencia_local'] ?? '',
-      descricao: map['descricao'],
-      usuarioId: map['usuario_id'],
-      lon: map['lon'],
-      lat: map['lat'],
-      rua: map['rua'],
-      totalCurtidas: map['total_curtidas'],
-      curtidoPorMim: map['curtido_por_mim'],
-      bairro: map['bairro'],
-      cidade: map['cidade'],
-      cep: map['cep'],
-      jsonEndereco: map['json_endereco'],
-      jsonMidias:
-          (map["json_midias"] as List<Map<String, dynamic>>?)
-              ?.map((map) => PostMidia.fromMap(map))
-              .toList() ??
-          [],
+  factory Post.fromJson(Map<String, dynamic> json) {
+    debugPrint(jsonEncode(json));
+    final post = Post(
+      id: json['post_id'],
+      titulo: json['titulo'],
+      referenciaLocalizacao: json['referencia_local'] ?? '',
+      descricao: json['descricao'],
+      lon: json['lon'],
+      lat: json['lat'],
+      rua: json['rua'],
+      totalCurtidas: json['total_curtidas'],
+      curtidoPorMim: json['curtido_por_mim'],
+      totalComentarios: json['total_comentarios'],
+      bairro: json['bairro'],
+      cidade: json['cidade'],
+      cep: json['cep'],
+      jsonEndereco: json['json_endereco'],
+      jsonMidias: (jsonDecode(json["json_midias"] ?? "") as List<dynamic>)
+          .map((map) => PostMidia.fromMap(map))
+          .toList(),
+      createdAt: json['created_at'],
+      usuario: Usuario.fromJson(json["usuario"]),
     );
+    debugPrint(jsonEncode(post.toJson()));
+    return post;
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
       "post_id": id,
       "titulo": titulo,
       "descricao": descricao,
       "lon": lon,
       "lat": lat,
-      "usuario_id": usuarioId,
+      "usuario_id": usuario.usuarioId,
       "referencia_local": referenciaLocalizacao,
       "rua": rua,
       "bairro": bairro,
@@ -127,4 +146,6 @@ class Post {
       "json_endereco": jsonEndereco,
     };
   }
+
+  late DateTime createdDateTime = DateTime.parse(createdAt);
 }

@@ -1,4 +1,5 @@
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:myapp/Usuario.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthRepository {
@@ -7,6 +8,18 @@ class AuthRepository {
   static final auth = Supabase.instance.client.auth;
 
   static Session? get session => auth.currentSession;
+
+  static Usuario get usuarioAtual {
+    return _usuarioAtual ?? _getUsuarioAtual();
+  }
+
+  static Usuario? _usuarioAtual;
+
+  static Usuario _getUsuarioAtual() {
+    final usuario = Usuario.fromUser(auth.currentUser!);
+    _usuarioAtual = usuario;
+    return usuario;
+  }
 
   static Future<void> signInWithOAuth(OAuthProvider provider) async {
     const webClientId =
@@ -40,5 +53,9 @@ class AuthRepository {
       idToken: idToken,
       accessToken: authorization.accessToken,
     );
+  }
+
+  static Future<void> logout() async {
+    await auth.signOut();
   }
 }

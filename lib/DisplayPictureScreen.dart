@@ -16,31 +16,49 @@ class DisplayPictureScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Ver Foto')),
       body: Stack(
         children: [
-          Stack(
-            children: [
-              Image.file(File(file.path)),
-              if (!readOnly)
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Align(
-                    alignment: Alignment.bottomRight,
-                    child: FilledButton(
-                      onPressed: () async {
-                        PostsRepository.adicionaMidia(file);
-                        Navigator.pop(context);
-                      },
-                      style: FilledButton.styleFrom(
-                        padding: EdgeInsets.fromLTRB(20, 16, 20, 16),
-                      ),
-                      child: Text("Enviar esta foto"),
-                    ),
-                  ),
+          SizedBox.expand(child: Container(color: Colors.black)),
+          Align(
+            alignment: Alignment.topLeft,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: IconButton(
+                style: IconButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  iconSize: 30,
                 ),
-            ],
+                onPressed: () => Navigator.pop(context),
+                icon: Icon(Icons.arrow_back),
+              ),
+            ),
           ),
+          Align(
+            alignment: Alignment.center,
+            child: ClipRRect(
+              borderRadius: BorderRadiusGeometry.circular(12),
+              child: Image.file(File(file.path), fit: BoxFit.fitHeight),
+            ),
+          ),
+          if (!readOnly)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 48.0),
+              child: Align(
+                alignment: Alignment.bottomRight,
+                child: FilledButton(
+                  onPressed: () async {
+                    PostsRepository.adicionaMidia(file);
+                    Navigator.pop(context);
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    padding: EdgeInsets.fromLTRB(20, 16, 20, 16),
+                  ),
+                  child: Text("Enviar esta foto"),
+                ),
+              ),
+            ),
         ],
       ),
     );

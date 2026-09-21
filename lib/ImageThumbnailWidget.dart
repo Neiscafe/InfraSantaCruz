@@ -6,8 +6,9 @@ class ImageThumbnailWidget extends StatelessWidget {
     super.key,
     required this.onTap,
     required this.file,
-  });
-
+    double? borderRadius
+  }): borderRadius = borderRadius??0;
+  final double borderRadius;
   final void Function(XFile file) onTap;
   final XFile file;
 
@@ -19,9 +20,10 @@ class ImageThumbnailWidget extends StatelessWidget {
         if (!asyncSnapshot.hasData) {
           return CircularProgressIndicator();
         }
-        return GestureDetector(
-          child: Image.memory(asyncSnapshot.requireData, fit: BoxFit.fill),
-          onTap: () => onTap(file),
+        return InkWell(
+          borderRadius: BorderRadius.circular(borderRadius),
+          onTapUp: (_) => onTap(file),
+          child: Image.memory(asyncSnapshot.requireData),
         );
       },
     );

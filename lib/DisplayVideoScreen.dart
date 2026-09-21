@@ -38,30 +38,50 @@ class _DisplayVideoScreenState extends State<DisplayVideoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Ver Vídeo')),
       body: FutureBuilder(
         future: _initializeVideoPlayerFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
             return Stack(
               children: [
-                AspectRatio(
-                  aspectRatio: _controller.value.aspectRatio,
-                  child: GestureDetector(
-                    child: VideoPlayer(_controller),
-                    onTap: () {
-                      if (!_controller.value.isPlaying) {
-                        _controller.play();
-                        setState(() {
-                          _videoRodando = true;
-                        });
-                      } else {
-                        _controller.pause();
-                        setState(() {
-                          _videoRodando = false;
-                        });
-                      }
-                    },
+                SizedBox.expand(child: Container(color: Colors.black)),
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 32),
+                    child: IconButton(
+                      style: IconButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        iconSize: 30,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(Icons.arrow_back),
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.center,
+                  child: ClipRRect(
+                    borderRadius: BorderRadiusGeometry.circular(12),
+                    child: AspectRatio(
+                      aspectRatio: _controller.value.aspectRatio,
+                      child: GestureDetector(
+                        child: VideoPlayer(_controller),
+                        onTap: () {
+                          if (!_controller.value.isPlaying) {
+                            _controller.play();
+                            setState(() {
+                              _videoRodando = true;
+                            });
+                          } else {
+                            _controller.pause();
+                            setState(() {
+                              _videoRodando = false;
+                            });
+                          }
+                        },
+                      ),
+                    ),
                   ),
                 ),
                 if (!widget.readOnly)

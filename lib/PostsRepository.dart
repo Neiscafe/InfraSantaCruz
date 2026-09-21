@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mime/mime.dart';
 import 'package:myapp/AuthRepository.dart';
+import 'package:myapp/Comentario.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/v4.dart';
 
 import 'Post.dart';
 
@@ -42,21 +46,6 @@ class PostsRepository {
 
   static String get userId => AuthRepository.session!.user.id;
 
-  // static Future<List<String>> buscaUrlsDownloadMidia(String postId) async {
-  //   try {
-  //     final medias = await storage.from('posts').list(path: "$userId/$postId");
-  //     final mediaUrls = medias
-  //         .map((media) => "$userId/$postId/${media.name}")
-  //         .toList();
-  //     final signedUrls = await storage.from('posts').createSignedUrls(
-  //         mediaUrls, 60);
-  //     signedUrls.map((signedUrl) => signedUrl.);
-  //   } catch (e) {
-  //     debugPrint("$e");
-  //     throw Exception("Não foi possível listar as mídias: $e");
-  //   }
-  // }
-
   static List<XFile> midiasPost = [];
 
   static void adicionaMidia(XFile midia) async {
@@ -67,14 +56,28 @@ class PostsRepository {
     midiasPost.remove(imagem);
   }
 
-  static Future<List<Post>> buscaPosts(int currentPage) async {
+  static Future<List<Post>> buscaPosts(
+    String? dataPostMaisAntigo,
+    String? usuarioId,
+  ) async {
     try {
-      final response = await client.from('posts').select(
-        '''*, total_curtidas, curtido_por_mim''',
+      var query = client.from('posts').select(
+        '''*, total_curtidas, curtido_por_mim, total_comentarios, usuario:users(*)''',
       );
-      //.neq("usuario_id", AuthRepository.session!.user.id);
-      return response.map((item) => Post.fromMap(item)).toList();
-    } on Exception catch (e, trace) {
+      if (dataPostMaisAntigo != null) {
+        query = query.lt("created_at", dataPostMaisAntigo);
+      }
+      if (usuarioId != null) {
+        query = query.eq("usuario_id", usuarioId);
+      } else {
+        // query.neq("usuario_id", AuthRepository.usuarioAtual.usuarioId);
+      }
+      final response = await query
+          .order("created_at", ascending: false)
+          .order("post_id", ascending: false)
+          .limit(20);
+      return response.map((item) => Post.fromJson(item)).toList();
+    } catch (e, trace) {
       debugPrint(trace.toString());
       debugPrint(e.toString());
       throw Exception("Falha ao buscar posts: $e");
@@ -82,14 +85,16 @@ class PostsRepository {
   }
 
   static Future<void> criaPost(Post post) async {
-    List<Map<String, dynamic>> filesData = List.empty();
-    for (int i = 0; i < post.jsonMidias.length; i++) {
+    List<Map<String, dynamic>> filesData = List.empty(growable: true);
+    for (int i = 0; i < midiasPost.length; i++) {
       final arquivo = midiasPost[i];
-      final privateUrl = "${post.usuarioId}/${post.id}/${arquivo.name}";
+      final privateUrl =
+          "${post.usuario.usuarioId}/${post.id}/${UuidV4().generate()}";
       filesData.add({
         "privateUrl": privateUrl,
         "publicUrl": storage.from("posts").getPublicUrl(privateUrl),
         "file": arquivo,
+        "mime": lookupMimeType(arquivo.path),
       });
     }
     try {
@@ -101,37 +106,41 @@ class PostsRepository {
                   jsonMidias: filesData.map((fileData) {
                     return PostMidia(
                       publicUrl: fileData['publicUrl'],
-                      mime: lookupMimeType(fileData['file'].path)!,
+                      mime: fileData['mime'],
                     );
                   }).toList(),
                 )
-                .toMap(),
+                .toJson(),
           );
-    } on Exception catch (e, trace) {
+    } catch (e, trace) {
       debugPrint(trace.toString());
       debugPrint(e.toString());
+      midiasPost.clear();
       throw Exception("Falha ao criar registro de post: $e");
     }
     try {
-      final futureUploads = filesData.map((fileData) async {
-        storage
+      int count = 0;
+      while (count < filesData.length) {
+        final fileData = filesData[count];
+        await storage
             .from("posts")
             .upload(
               fileData['privateUrl'],
               File.fromUri(Uri.file(fileData['file'].path)),
+              fileOptions: FileOptions(contentType: fileData['mime']),
             );
-      });
-      await Future.wait(futureUploads);
-    } on Exception catch (e, trace) {
-      final List<Future<dynamic>> futures = [];
-      if (filesData.isNotEmpty) {
-        futures.add(storage.from("posts").remove([post.id]));
+        count++;
       }
-      futures.add(client.from('posts').delete().eq('post_id', post.id));
-      Future.wait(futures);
+    } catch (e, trace) {
+      if (filesData.isNotEmpty) {
+        await storage.from("posts").remove([post.id]);
+      }
+      await client.from('posts').delete().eq('post_id', post.id);
       debugPrint(trace.toString());
       debugPrint(e.toString());
       throw Exception("Falha ao criar mídias do post: $e");
+    } finally {
+      midiasPost.clear();
     }
   }
 
@@ -142,7 +151,7 @@ class PostsRepository {
   static Future<void> curtePost(Post post) async {
     try {
       await client.from("post_likes").insert({"post_id": post.id});
-    } on Exception catch (e, trace) {
+    } catch (e, trace) {
       debugPrint(trace.toString());
       debugPrint(e.toString());
       throw Exception("Falha ao curtir post: $e");
@@ -156,20 +165,142 @@ class PostsRepository {
           .delete()
           .eq("post_id", post.id)
           .eq("usuario_id", userId);
-    } on Exception catch (e, trace) {
+    } catch (e, trace) {
       debugPrint(trace.toString());
       debugPrint(e.toString());
       throw Exception("Falha ao descurtir post: $e");
     }
   }
 
-  static Future<Uint8List> downloadMidia(PostMidia midia) async {
+  static Future<File> downloadVideo(PostMidia midia) async {
     try {
-      return await storage.from("posts").download(midia.publicUrl);
-    } on Exception catch (e, trace) {
+      final baseUrl =
+          "https://yombhmzdpmffekqhdtrv.supabase.co/storage/v1/object/public/posts/";
+      final remotePath = midia.publicUrl.replaceAll(baseUrl, "");
+      final appDirPath = (await getApplicationCacheDirectory()).path;
+      final splitPath = remotePath.split("/");
+      final postId = splitPath[splitPath.length - 2];
+      final fileName = splitPath.last;
+      final cachePath = "$appDirPath/$postId/$fileName.mp4";
+      final file = File(cachePath);
+      if (await file.exists()) {
+        final lastModified = await file.lastModified();
+        final modificationDiff = lastModified.difference(DateTime.now());
+        final newerThan7Days =
+            modificationDiff.compareTo(Duration(days: 7)) < 0;
+        if (newerThan7Days) return file;
+      } else {
+        await file.create(recursive: true);
+      }
+      final fileBytes = await storage.from("posts").download(remotePath);
+      await file.writeAsBytes(fileBytes);
+      return file;
+    } catch (e, trace) {
       debugPrint(trace.toString());
       debugPrint(e.toString());
+      debugPrint(jsonEncode(midia.toMap()));
       throw Exception("Falha ao baixar mídia: $e");
+    }
+  }
+
+  static Future<List<Comentario>> buscaRespostas(
+    Comentario comentario,
+    String? dataComentarioMaisAntigo,
+  ) async {
+    try {
+      var query = client.from('post_comments').select('''*, 
+        total_curtidas_comentario,
+        total_comentarios_comentario, 
+        curtido_por_mim,
+        usuario:users!post_comments_usuario_id_fkey(*), 
+        reply_username:users!post_comments_user_reply_id_fkey(full_name)
+        ''');
+
+      if (dataComentarioMaisAntigo != null) {
+        query = query.lt("created_at", dataComentarioMaisAntigo);
+      }
+      var response = await query
+          .eq("comment_above_id", comentario.commentId)
+          .order("created_at", ascending: false)
+          .order("comment_id", ascending: false)
+          .limit(20);
+      return response.map((item) => Comentario.fromJson(item)).toList();
+    } catch (e, trace) {
+      debugPrint(trace.toString());
+      debugPrint(e.toString());
+      throw Exception("Falha ao buscar comentários: $e");
+    }
+  }
+
+  static Future<void> curteComentario(Comentario comentario) async {
+    try {
+      await client.from('comment_likes').insert({
+        "id": UuidV4().generate(),
+        "created_at": DateTime.now().toString(),
+        "comment_id": comentario.commentId,
+      });
+    } catch (e, trace) {
+      debugPrint(trace.toString());
+      debugPrint(e.toString());
+      throw Exception("Falha ao buscar comentários: $e");
+    }
+  }
+
+  static Future<Comentario> criaComentario(Comentario comentario) async {
+    try {
+      final response = await client
+          .from("post_comments")
+          .insert(comentario.toJson())
+          .select("*, usuario:users!post_comments_usuario_id_fkey(*)");
+      return response.map((it) => Comentario.fromJson(it)).first;
+    } catch (e, trace) {
+      debugPrint(trace.toString());
+      debugPrint(e.toString());
+      throw Exception("Falha ao criar registro de comentário: $e");
+    }
+  }
+
+  static Future<void> descurteComentario(Comentario comentario) async {
+    try {
+      await client
+          .from('comment_likes')
+          .delete()
+          .eq("comment_id", comentario.commentId)
+          .eq("usuario_id", AuthRepository.session!.user.id);
+    } catch (e, trace) {
+      debugPrint(trace.toString());
+      debugPrint(e.toString());
+      throw Exception("Falha ao buscar comentários: $e");
+    }
+  }
+
+  static Future<List<Comentario>> buscaComentarios(
+    Post post,
+    String? dataComentarioMaisAntigo,
+  ) async {
+    try {
+      var query = client
+          .from('post_comments')
+          .select('''*, 
+            total_curtidas_comentario, 
+            total_comentarios_comentario, 
+            curtido_por_mim, 
+            usuario:users!post_comments_usuario_id_fkey(*)
+            ''')
+          .eq("post_id", post.id);
+      if (dataComentarioMaisAntigo != null) {
+        query = query.lt("created_at", dataComentarioMaisAntigo);
+      }
+      final response = await query
+          .isFilter("comment_above_id", null)
+          .order("created_at", ascending: false)
+          .order("comment_id", ascending: false)
+          .limit(20);
+      return response.map((item) => Comentario.fromJson(item)).toList();
+    } catch (e, trace) {
+      debugPrint(trace.toString());
+      debugPrint(e.toString());
+      throw Exception("Falha ao buscar comentários: $e");
     }
   }
 }

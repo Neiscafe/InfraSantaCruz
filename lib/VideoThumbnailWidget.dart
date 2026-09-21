@@ -6,13 +6,8 @@ import 'package:video_player/video_player.dart';
 
 class VideoThumbnailWidget extends StatefulWidget {
   final XFile file;
-  final void Function(XFile file) onTap;
 
-  const VideoThumbnailWidget({
-    super.key,
-    required this.file,
-    required this.onTap,
-  });
+  const VideoThumbnailWidget({super.key, required this.file});
 
   @override
   State<VideoThumbnailWidget> createState() => _VideoThumbnailWidgetState();
@@ -24,12 +19,14 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
   @override
   Widget build(BuildContext context) {
     if (_videoController?.value.isInitialized == true) {
-      return GestureDetector(
-        child: VideoPlayer(_videoController!),
-        onTap: () => widget.onTap(widget.file),
+      return Center(
+        child: AspectRatio(
+          aspectRatio: _videoController!.value.aspectRatio,
+          child: VideoPlayer(_videoController!),
+        ),
       );
     } else {
-      return CircularProgressIndicator();
+      return Center(child: CircularProgressIndicator(color: Colors.grey[900]));
     }
   }
 
