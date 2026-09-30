@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:myapp/LoginPage.dart';
+import 'package:myapp/ConnectivityWrapper.dart';
 import 'package:myapp/SplashScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -32,6 +32,9 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
       ),
+      builder: (context, child) {
+        return ConnectivityWrapper(child: child ?? const SizedBox.shrink());
+      },
       // home: const MyHomePage(),
       home: SplashScreen(),
     );
