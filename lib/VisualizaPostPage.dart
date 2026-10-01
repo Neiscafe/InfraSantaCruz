@@ -47,35 +47,7 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
         padding: const EdgeInsets.all(16.0),
         child: CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _usuarioWidget(),
-                  Text(
-                    post.titulo,
-                    style: TextStyle(color: Colors.black, fontSize: 24),
-                  ),
-                  Text(
-                    post.descricao,
-                    style: TextStyle(color: Colors.black, fontSize: 18),
-                  ),
-                  SizedBox(height: 12),
-                  Row(
-                    children: [Icon(Icons.date_range), _dataPostagemWidget()],
-                  ),
-                  Row(
-                    children: [
-                      Icon(Icons.place),
-                      Text(
-                        "${post.bairro}, ${post.rua}, ${post.referenciaLocalizacao}",
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 12),
-                ],
-              ),
-            ),
+            SliverToBoxAdapter(child: _postWidget()),
             SliverToBoxAdapter(
               child: SizedBox(
                 height: 200,
@@ -92,64 +64,7 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
                 ),
               ),
             ),
-            SliverToBoxAdapter(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: exibeEscreverComentario,
-                    style: IconButton.styleFrom(
-                      minimumSize: Size.square(20),
-                      backgroundColor: Colors.transparent,
-                    ),
-                    child: Row(
-                      spacing: 12,
-                      children: [
-                        Icon(Icons.comment_outlined, color: Colors.grey),
-                        Text(
-                          "${post.totalComentarios}",
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[900],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      if (post.curtidoPorMim) {
-                        descurtePost(post);
-                      } else {
-                        curtePost(post);
-                      }
-                    },
-                    style: IconButton.styleFrom(
-                      minimumSize: Size.square(20),
-                      backgroundColor: Colors.transparent,
-                    ),
-                    child: Row(
-                      spacing: 12,
-                      children: [
-                        Icon(
-                          post.curtidoPorMim
-                              ? Icons.favorite
-                              : Icons.favorite_border,
-                          color: post.curtidoPorMim ? Colors.red : Colors.grey,
-                        ),
-                        Text(
-                          post.totalCurtidas.toString(),
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[900],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            SliverToBoxAdapter(child: _controlesPostWidget()),
             SliverToBoxAdapter(child: _escreverComentarioWidget()),
             SliverList(
               delegate: SliverChildBuilderDelegate(
@@ -176,6 +91,102 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Column _postWidget() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _usuarioWidget(),
+        SizedBox(height: 24),
+        Text(
+          post.titulo,
+          style: TextStyle(
+            color: Colors.grey[900],
+            fontWeight: FontWeight.w500,
+            fontSize: 18,
+          ),
+        ),
+        SizedBox(height: 4),
+        Text(
+          post.descricao,
+          style: TextStyle(color: Colors.grey[900], fontSize: 16),
+        ),
+        SizedBox(height: 24),
+        Row(
+          spacing: 8,
+          children: [
+            Icon(Icons.date_range, color: Colors.grey[900]),
+            _dataPostagemWidget(),
+          ],
+        ),
+        SizedBox(height: 4),
+        Row(
+          spacing: 8,
+          children: [
+            Icon(Icons.place, color: Colors.grey[900]),
+            Expanded(
+              child: Text(
+                "${post.bairro}, ${post.rua}, ${post.referenciaLocalizacao}",
+                style: TextStyle(color: Colors.grey[900]),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12),
+      ],
+    );
+  }
+
+  Row _controlesPostWidget() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        TextButton(
+          onPressed: exibeEscreverComentario,
+          style: IconButton.styleFrom(
+            minimumSize: Size.square(20),
+            backgroundColor: Colors.transparent,
+          ),
+          child: Row(
+            spacing: 12,
+            children: [
+              Icon(Icons.comment_outlined, color: Colors.grey),
+              Text(
+                "${post.totalComentarios}",
+                style: TextStyle(fontSize: 16, color: Colors.grey[900]),
+              ),
+            ],
+          ),
+        ),
+        TextButton(
+          onPressed: () {
+            if (post.curtidoPorMim) {
+              descurtePost(post);
+            } else {
+              curtePost(post);
+            }
+          },
+          style: IconButton.styleFrom(
+            minimumSize: Size.square(20),
+            backgroundColor: Colors.transparent,
+          ),
+          child: Row(
+            spacing: 12,
+            children: [
+              Icon(
+                post.curtidoPorMim ? Icons.favorite : Icons.favorite_border,
+                color: post.curtidoPorMim ? Colors.red : Colors.grey,
+              ),
+              Text(
+                post.totalCurtidas.toString(),
+                style: TextStyle(fontSize: 16, color: Colors.grey[900]),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -236,7 +247,7 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
           String minute = "${createdDateTime.minute}".padLeft(2, '0');
           text = "Postado em $day/$month/${createdDateTime.year} $hour:$minute";
         }
-        return Text(text);
+        return Text(text, style: TextStyle(color: Colors.grey[900]));
       },
     );
   }
@@ -846,10 +857,10 @@ class _CommentItemState extends State<CommentItem> {
         children: [
           if (comentario.commentAboveId != null)
             TextSpan(
-              text: "@${comentario.replyUsername}",
+              text: "@${comentario.replyUsername} ",
               style: TextStyle(color: Colors.blue),
             ),
-          TextSpan(text: " ${comentario.text}"),
+          TextSpan(text: comentario.text),
         ],
       ),
     );
@@ -983,11 +994,6 @@ class _FeedMediaItemState extends State<FeedMediaItem> {
                     image: DecorationImage(image: provider, fit: BoxFit.fill),
                   ),
                   height: height,
-                  child: Card(
-                    color: Colors.transparent,
-                    elevation: 0,
-                    child: Center(child: Icon(Icons.photo_camera)),
-                  ),
                 ),
               );
             },
@@ -1067,14 +1073,8 @@ class _FeedMediaItemState extends State<FeedMediaItem> {
                         ),
                       ),
                     ),
-                    child: Stack(
-                      children: [
-                        Align(
-                          alignment: Alignment.center,
-                          child: Icon(Icons.video_camera_back),
-                        ),
-                        VideoThumbnailWidget(file: XFile(snapshot.data!.path)),
-                      ],
+                    child: VideoThumbnailWidget(
+                      file: XFile(snapshot.data!.path),
                     ),
                   ),
                 ),
