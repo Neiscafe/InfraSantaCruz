@@ -27,6 +27,11 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
   late Post post;
   Timer? _likeDebounceTimer;
   bool? _initialCurtidoPorMim;
+
+  final Map<String, Timer> _commentLikeDebounceTimers = {};
+  final Map<String, bool> _commentInitialCurtido = {};
+  final Map<String, Comentario> _commentLatestState = {};
+
   bool finalPage = false;
   bool loading = true;
   bool silentLoading = false;
@@ -103,7 +108,10 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
                         Icon(Icons.comment_outlined, color: Colors.grey),
                         Text(
                           "${post.totalComentarios}",
-                          style: TextStyle(fontSize: 16, color: Colors.grey[900]),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[900],
+                          ),
                         ),
                       ],
                     ),
@@ -131,7 +139,10 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
                         ),
                         Text(
                           post.totalCurtidas.toString(),
-                          style: TextStyle(fontSize: 16, color: Colors.grey[900]),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[900],
+                          ),
                         ),
                       ],
                     ),
@@ -291,92 +302,87 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
     );
   }
 
-  void descurteComentario(Comentario comentario) async {
-    try {
-      setState(() {
-        if (comentario.commentAboveId == null) {
-          var _comments = comments.toList();
-          _comments[_comments.indexOf(comentario)] = comentario.copy(
-            curtidoPorMim: false,
-            curtidas: comentario.curtidas - 1,
-          );
+  void _onCommentLikeToggled(Comentario comentario) {
+    final commentId = comentario.commentId;
+
+    _commentInitialCurtido[commentId] ??= comentario.curtidoPorMim;
+
+    final novoCurtido = !comentario.curtidoPorMim;
+    final novasCurtidas = novoCurtido
+        ? comentario.curtidas + 1
+        : comentario.curtidas - 1;
+
+    final comentarioAtualizado = comentario.copy(
+      curtidoPorMim: novoCurtido,
+      curtidas: novasCurtidas,
+    );
+
+    _commentLatestState[commentId] = comentarioAtualizado;
+
+    setState(() {
+      if (comentario.commentAboveId == null) {
+        var _comments = comments.toList();
+        final idx = _comments.indexWhere((c) => c.commentId == commentId);
+        if (idx != -1) {
+          _comments[idx] = comentarioAtualizado;
           comments = _comments;
-        } else {
-          // Pega comentário acima
-          var _comments = comments.toList();
-          int? iComentarioAcima = null;
-          Comentario? comentarioAcima = null;
-          for (var (i, comment) in _comments.indexed) {
-            if (comment.commentId == comentario.commentAboveId) {
-              iComentarioAcima = i;
-              comentarioAcima = comment;
-              break;
-            }
-          }
-          // Pega resposta a ser alterada no comentário acima
-          List<Comentario> _respostas = comentarioAcima!.respostas.toList();
-          for (var (i, resposta) in _respostas.indexed) {
-            if (resposta.commentId == comentario.commentId) {
-              // Altera a resposta
-              _respostas[i] = comentario.copy(
-                curtidoPorMim: false,
-                curtidas: comentario.curtidas - 1,
-              );
-              // Altera o comentário acima
-              _comments[iComentarioAcima!] = comentarioAcima.copy(
-                respostas: _respostas,
-              );
-              comments = _comments;
-            }
+        }
+      } else {
+        var _comments = comments.toList();
+        int? iComentarioAcima;
+        Comentario? comentarioAcima;
+        for (var (i, comment) in _comments.indexed) {
+          if (comment.commentId == comentario.commentAboveId) {
+            iComentarioAcima = i;
+            comentarioAcima = comment;
+            break;
           }
         }
-      });
-      PostsRepository.descurteComentario(comentario);
-    } catch (e, trace) {}
+        if (comentarioAcima != null && iComentarioAcima != null) {
+          List<Comentario> _respostas = comentarioAcima.respostas.toList();
+          final idx = _respostas.indexWhere((r) => r.commentId == commentId);
+          if (idx != -1) {
+            _respostas[idx] = comentarioAtualizado;
+            _comments[iComentarioAcima] = comentarioAcima.copy(
+              respostas: _respostas,
+            );
+            comments = _comments;
+          }
+        }
+      }
+    });
+
+    _commentLikeDebounceTimers[commentId]?.cancel();
+    _commentLikeDebounceTimers[commentId] = Timer(
+      const Duration(milliseconds: 500),
+      () => _syncCommentLikeWithServer(commentId),
+    );
+  }
+
+  void _syncCommentLikeWithServer(String commentId) {
+    _commentLikeDebounceTimers[commentId]?.cancel();
+    _commentLikeDebounceTimers.remove(commentId);
+
+    final initialCurtido = _commentInitialCurtido.remove(commentId);
+    final latestComment = _commentLatestState.remove(commentId);
+
+    if (initialCurtido != null &&
+        latestComment != null &&
+        initialCurtido != latestComment.curtidoPorMim) {
+      if (latestComment.curtidoPorMim) {
+        PostsRepository.curteComentario(latestComment);
+      } else {
+        PostsRepository.descurteComentario(latestComment);
+      }
+    }
+  }
+
+  void descurteComentario(Comentario comentario) {
+    _onCommentLikeToggled(comentario);
   }
 
   void curteComentario(Comentario comentario) {
-    try {
-      setState(() {
-        if (comentario.commentAboveId == null) {
-          var _comments = comments.toList();
-          _comments[_comments.indexOf(comentario)] = comentario.copy(
-            curtidoPorMim: true,
-            curtidas: comentario.curtidas + 1,
-          );
-          comments = _comments;
-        } else {
-          // Pega comentário acima
-          var _comments = comments.toList();
-          int? iComentarioAcima = null;
-          Comentario? comentarioAcima = null;
-          for (var (i, comment) in _comments.indexed) {
-            if (comment.commentId == comentario.commentAboveId) {
-              iComentarioAcima = i;
-              comentarioAcima = comment;
-              break;
-            }
-          }
-          // Pega resposta a ser alterada no comentário acima
-          List<Comentario> _respostas = comentarioAcima!.respostas.toList();
-          for (var (i, resposta) in _respostas.indexed) {
-            if (resposta.commentId == comentario.commentId) {
-              // Altera a resposta
-              _respostas[i] = comentario.copy(
-                curtidoPorMim: true,
-                curtidas: comentario.curtidas + 1,
-              );
-              // Altera o comentário acima
-              _comments[iComentarioAcima!] = comentarioAcima.copy(
-                respostas: _respostas,
-              );
-              comments = _comments;
-            }
-          }
-        }
-      });
-      PostsRepository.curteComentario(comentario);
-    } catch (e, trace) {}
+    _onCommentLikeToggled(comentario);
   }
 
   Future<void> escreverComentario(Comentario comentario) async {
@@ -666,6 +672,18 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
       _syncLikeWithServer();
     }
     _likeDebounceTimer?.cancel();
+
+    final pendingCommentIds = List<String>.from(
+      _commentLikeDebounceTimers.keys,
+    );
+    for (final id in pendingCommentIds) {
+      _syncCommentLikeWithServer(id);
+    }
+    for (final timer in _commentLikeDebounceTimers.values) {
+      timer.cancel();
+    }
+    _commentLikeDebounceTimers.clear();
+
     comentarioController.dispose();
     scrollController.dispose();
     super.dispose();
@@ -887,7 +905,10 @@ class _CommentItemState extends State<CommentItem> {
             comentario.curtidoPorMim ? Icons.favorite : Icons.favorite_border,
             color: comentario.curtidoPorMim ? Colors.red : Colors.grey,
           ),
-          Text(comentario.curtidas.toString(), style: TextStyle(fontSize: 16, color: Colors.grey[900])),
+          Text(
+            comentario.curtidas.toString(),
+            style: TextStyle(fontSize: 16, color: Colors.grey[900]),
+          ),
         ],
       ),
     );
