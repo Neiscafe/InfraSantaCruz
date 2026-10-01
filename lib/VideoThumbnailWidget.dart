@@ -19,9 +19,12 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
   @override
   Widget build(BuildContext context) {
     if (_videoController?.value.isInitialized == true) {
-      return Center(
-        child: AspectRatio(
-          aspectRatio: _videoController!.value.aspectRatio,
+      final size = _videoController!.value.size;
+      return FittedBox(
+        fit: BoxFit.fitWidth,
+        child: SizedBox(
+          width: size.width,
+          height: size.height,
           child: VideoPlayer(_videoController!),
         ),
       );
@@ -35,7 +38,9 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
     super.initState();
     _videoController = VideoPlayerController.file(File(widget.file.path));
     _videoController?.initialize().then((_) {
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     });
   }
 

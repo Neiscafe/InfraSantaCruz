@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:camera/camera.dart';
+import 'package:camera/camera.dart' hide ImageFormat;
 import 'package:flutter/foundation.dart';
 import 'package:mime/mime.dart';
 import 'package:myapp/AuthRepository.dart';
@@ -10,6 +10,7 @@ import 'package:myapp/Comentario.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/v4.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 
 import 'Post.dart';
 
@@ -181,7 +182,71 @@ class PostsRepository {
     }
   }
 
+  static final Map<String, Future<File>> _thumbFutures = {};
+  static final Map<String, File> _thumbFiles = {};
+
+  static File? thumbnailEmCache(PostMidia midia) =>
+      _thumbFiles[midia.publicUrl];
+
+  static Future<File> thumbnailVideo(PostMidia midia) {
+    return _thumbFutures.putIfAbsent(midia.publicUrl, () {
+      final future = _gerarThumbnail(midia).then((f) {
+        _thumbFiles[midia.publicUrl] = f;
+        return f;
+      });
+      future.then(
+        (_) {},
+        onError: (_) => _thumbFutures.remove(midia.publicUrl),
+      );
+      return future;
+    });
+  }
+
+  static Future<File> _gerarThumbnail(PostMidia midia) async {
+    const baseUrl =
+        "https://yombhmzdpmffekqhdtrv.supabase.co/storage/v1/object/public/posts/";
+    final remotePath = midia.publicUrl.replaceAll(baseUrl, "");
+    final splitPath = remotePath.split("/");
+    final postId = splitPath[splitPath.length - 2];
+    final fileName = splitPath.last;
+    final appDirPath = (await getApplicationCacheDirectory()).path;
+    final thumb = File("$appDirPath/$postId/$fileName.thumb.jpg");
+
+    if (await thumb.exists() && await thumb.length() > 0) return thumb;
+
+    final videoCache = File("$appDirPath/$postId/$fileName.mp4");
+    final origem = await videoCache.exists() && await videoCache.length() > 0
+        ? videoCache.path
+        : midia.publicUrl;
+
+    final bytes = await VideoThumbnail.thumbnailData(
+      video: origem,
+      imageFormat: ImageFormat.JPEG,
+      maxWidth: 400,
+      quality: 75,
+    );
+    if (bytes == null || bytes.isEmpty) {
+      throw Exception("Falha ao gerar miniatura");
+    }
+    await thumb.create(recursive: true);
+    await thumb.writeAsBytes(bytes);
+    return thumb;
+  }
+
+  static final Map<String, Future<File>> _videoFutures = {};
+
   static Future<File> downloadVideo(PostMidia midia) async {
+    return _videoFutures.putIfAbsent(midia.publicUrl, () {
+      final future = _downloadVideo(midia);
+      future.then(
+        (_) {},
+        onError: (_) => _videoFutures.remove(midia.publicUrl),
+      );
+      return future;
+    });
+  }
+
+  static Future<File> _downloadVideo(PostMidia midia) async {
     try {
       final baseUrl =
           "https://yombhmzdpmffekqhdtrv.supabase.co/storage/v1/object/public/posts/";
@@ -194,9 +259,8 @@ class PostsRepository {
       final file = File(cachePath);
       if (await file.exists()) {
         final lastModified = await file.lastModified();
-        final modificationDiff = lastModified.difference(DateTime.now());
-        final newerThan7Days =
-            modificationDiff.compareTo(Duration(days: 7)) < 0;
+        final modificationDiff = DateTime.now().difference(lastModified);
+        final newerThan7Days = modificationDiff < Duration(days: 7);
         if (newerThan7Days) return file;
       } else {
         await file.create(recursive: true);

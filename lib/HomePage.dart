@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:myapp/AuthRepository.dart';
@@ -13,7 +13,6 @@ import 'package:myapp/DisplayVideoScreen.dart';
 import 'package:myapp/PhotoMenuPage.dart';
 import 'package:myapp/PostsRepository.dart';
 import 'package:myapp/UserPage.dart';
-import 'package:myapp/VideoThumbnailWidget.dart';
 import 'package:myapp/VisualizaPostPage.dart';
 
 import 'Post.dart';
@@ -187,7 +186,7 @@ class _HomePageState extends State<HomePage> {
     }
     setState(() {
       loading = false;
-      if (error == null && novosPosts!.isEmpty || novosPosts!.length < 20) {
+      if (error == null && novosPosts!.isEmpty || novosPosts!.length < 50) {
         finalPage = true;
         return;
       }
@@ -313,41 +312,13 @@ class _PostCardWidgetState extends State<PostCardWidget> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  post.titulo,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    fontSize: 18,
-                  ),
-                ),
+                _tituloWidget(),
                 SizedBox(height: 4),
                 if (post.referenciaLocalizacao.isNotEmpty) ...[
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on,
-                        size: 16,
-                        color: Colors.grey[800],
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        post.referenciaLocalizacao,
-                        style: TextStyle(
-                          color: Colors.grey[800],
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
+                  _localizacaoWidget(),
                   SizedBox(height: 4),
                 ],
-                Text(
-                  post.descricao,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 16, color: Colors.grey[900]),
-                ),
+                _descricaoWidget(),
               ],
             ),
           ),
@@ -359,35 +330,58 @@ class _PostCardWidgetState extends State<PostCardWidget> {
     );
   }
 
-  Widget _postMedias(BuildContext context) {
+  Text _descricaoWidget() {
+    return Text(
+      post.descricao,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(fontSize: 16, color: Colors.grey[900]),
+    );
+  }
+
+  Text _tituloWidget() {
+    return Text(
+      post.titulo,
+      style: TextStyle(
+        fontWeight: FontWeight.bold,
+        color: Colors.black,
+        fontSize: 18,
+      ),
+    );
+  }
+
+  Row _localizacaoWidget() {
     return Row(
       children: [
-        for (var (i, midia) in post.jsonMidias.indexed.take(3)) ...[
-          FeedMediaItem(midia: midia),
-          SizedBox(width: 4),
-        ],
-        if (post.jsonMidias.length > 3)
-          GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) {
-                    return VisualizaPostPage(post: post);
-                  },
-                ),
-              );
-            },
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Center(child: Icon(Icons.add)),
-            ),
+        Icon(Icons.location_on, size: 16, color: Colors.grey[800]),
+        SizedBox(width: 4),
+        Text(
+          post.referenciaLocalizacao,
+          style: TextStyle(
+            color: Colors.grey[800],
+            fontWeight: FontWeight.bold,
           ),
+        ),
       ],
+    );
+  }
+
+  Widget _postMedias(BuildContext context) {
+    final midias = post.jsonMidias;
+    if (midias.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      height: 200,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: midias.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 4),
+        itemBuilder: (context, index) {
+          return FeedMediaItem(
+            key: ValueKey("${midias[index].publicUrl}_$index"),
+            midia: midias[index],
+          );
+        },
+      ),
     );
   }
 
@@ -404,10 +398,7 @@ class _PostCardWidgetState extends State<PostCardWidget> {
           child: Row(
             spacing: 12,
             children: [
-              Icon(
-                Icons.comment_outlined,
-                color: Colors.grey,
-              ),
+              Icon(Icons.comment_outlined, color: Colors.grey),
               Text(
                 "$numComentarios",
                 style: TextStyle(fontSize: 16, color: Colors.grey[900]),
@@ -434,7 +425,7 @@ class _PostCardWidgetState extends State<PostCardWidget> {
               ),
             ],
           ),
-        )
+        ),
       ],
     );
   }
@@ -484,8 +475,10 @@ class FeedMediaItem extends StatefulWidget {
 
 class _FeedMediaItemState extends State<FeedMediaItem> {
   String get url => widget.midia.publicUrl;
+  bool _abrindo = false;
 
   String get mimeType => widget.midia.mime;
+  Future<File>? _thumbFuture;
 
   @override
   void didChangeDependencies() {
@@ -496,15 +489,23 @@ class _FeedMediaItemState extends State<FeedMediaItem> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    if (mimeType.contains("video/")) {
+      _thumbFuture = PostsRepository.thumbnailVideo(widget.midia);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final width = 80.0;
-    final height = 80.0;
+    final width = 200.0;
+    final height = 200.0;
     return Builder(
       builder: (context) {
         if (mimeType.contains("image/")) {
-          return _imageView(width, height);
+          return _imageWidget(width, height);
         } else if (mimeType.contains("video/")) {
-          return _videoView(width, height);
+          return _videoWidget(width, height);
         } else {
           return SizedBox(
             width: width,
@@ -516,138 +517,179 @@ class _FeedMediaItemState extends State<FeedMediaItem> {
     );
   }
 
-  Widget _videoView(double width, double height) {
-    return FutureBuilder(
-      future: PostsRepository.downloadVideo(widget.midia),
+  Widget _videoWidget(double width, double height) {
+    return FutureBuilder<File>(
+      future: _thumbFuture,
+      initialData: PostsRepository.thumbnailEmCache(widget.midia),
       builder: (context, snapshot) {
-        final file = snapshot.data != null ? XFile(snapshot.data!.path) : null;
-        if (!snapshot.hasError && !snapshot.hasData) {
-          return Card(
-            margin: EdgeInsets.all(0),
-            child: Container(
-              width: width,
-              height: height,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              ),
-            ),
-          );
-        }
         if (snapshot.hasError) {
-          return SizedBox(
-            width: width,
-            height: height,
-            child: Card(
-              color: Theme.of(context).colorScheme.error,
-              child: Center(child: Icon(Icons.video_camera_back_outlined)),
-            ),
-          );
+          return _mediaErrorWidget(width, height, context);
         }
-        return ClipRRect(
-          borderRadius: BorderRadiusGeometry.circular(14),
-          child: Material(
-            borderRadius: BorderRadiusGeometry.circular(14),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(14),
-              onTapUp: (_) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => DisplayVideoScreen(
-                      imagePath: file.path,
-                      readOnly: true,
-                    ),
-                  ),
-                );
-              },
-              child: Ink(
+        if (!snapshot.hasData) {
+          return _mediaLoadingWidget(width, height);
+        }
+        return _mediaLoadedWidget(
+          context,
+          width,
+          height,
+          Stack(
+            fit: StackFit.expand,
+            alignment: Alignment.center,
+            children: [
+              Image.file(
+                snapshot.requireData,
+                fit: BoxFit.cover,
                 width: width,
                 height: height,
-                decoration: BoxDecoration(color: Colors.grey[300]),
-                child: Stack(
-                  children: [
-                    VideoThumbnailWidget(file: file!),
-                    Align(
-                      alignment: AlignmentGeometry.center,
-                      child: Icon(Icons.play_circle, color: Colors.grey[900]),
-                    ),
-                  ],
-                ),
               ),
-            ),
+              Center(
+                child: _abrindo
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Icon(
+                        Icons.play_circle,
+                        color: Colors.white,
+                        size: 48,
+                      ),
+              ),
+            ],
           ),
+          _abrirVideo,
         );
       },
     );
   }
 
-  Widget _imageView(double width, double height) {
+  Future<void> _abrirVideo() async {
+    if (_abrindo) return;
+    setState(() => _abrindo = true);
+    try {
+      final file = await PostsRepository.downloadVideo(widget.midia);
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              DisplayVideoScreen(imagePath: file.path, readOnly: true),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(Consts.ERROR)));
+    } finally {
+      if (mounted) setState(() => _abrindo = false);
+    }
+  }
+
+  Widget _imageLoadedWidget(
+    double width,
+    double height,
+    ImageProvider<Object> provider,
+    BuildContext context,
+  ) {
+    return _mediaLoadedWidget(
+      context,
+      width,
+      height,
+      Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: Colors.black12,
+          image: DecorationImage(image: provider, fit: BoxFit.fitWidth),
+        ),
+      ),
+      () {
+        DefaultCacheManager().getFileFromCache(url).then((fileInfo) {
+          if (!context.mounted) {
+            return;
+          }
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) {
+                return DisplayPictureScreen(
+                  imagePath: fileInfo!.file.path,
+                  readOnly: true,
+                );
+              },
+            ),
+          );
+        });
+      },
+    );
+  }
+
+  ClipRRect _mediaLoadedWidget(
+    BuildContext context,
+    double width,
+    double height,
+    Widget child,
+    VoidCallback onTapUp,
+  ) {
+    return ClipRRect(
+      borderRadius: BorderRadiusGeometry.circular(14),
+      child: Material(
+        borderRadius: BorderRadiusGeometry.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTapUp: (_) {
+            onTapUp();
+          },
+          child: Ink(
+            width: width,
+            height: height,
+            decoration: BoxDecoration(color: Colors.grey[300]),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Card _mediaLoadingWidget(double width, double height) {
+    return Card(
+      margin: EdgeInsets.all(0),
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10)),
+      ),
+    );
+  }
+
+  SizedBox _mediaErrorWidget(
+    double width,
+    double height,
+    BuildContext context,
+  ) {
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Card(
+        color: Theme.of(context).colorScheme.error,
+        child: Center(child: Icon(Icons.video_camera_back_outlined)),
+      ),
+    );
+  }
+
+  Widget _imageWidget(double width, double height) {
     return CachedNetworkImage(
       fit: BoxFit.fill,
       imageUrl: url,
       imageBuilder: (context, provider) {
-        return InkWell(
-          borderRadius: BorderRadius.circular(14),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
-              width: width,
-              height: height,
-              decoration: BoxDecoration(
-                color: Colors.black12,
-                image: DecorationImage(image: provider, fit: BoxFit.fitHeight),
-              ),
-            ),
-          ),
-          onTapUp: (details) {
-            DefaultCacheManager().getFileFromCache(url).then((fileInfo) {
-              if (!context.mounted) {
-                return;
-              }
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) {
-                    return DisplayPictureScreen(
-                      imagePath: fileInfo!.file.path,
-                      readOnly: true,
-                    );
-                  },
-                ),
-              );
-            });
-          },
-        );
+        return _imageLoadedWidget(width, height, provider, context);
       },
       placeholder: (context, url) {
-        return Card(
-          margin: EdgeInsets.all(0),
-          child: Container(
-            width: width,
-            height: height,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            ),
-          ),
-        );
+        return _mediaLoadingWidget(width, height);
       },
       errorWidget: (context, url, error) {
-        return SizedBox(
-          width: width,
-          height: height,
-          child: Card(
-            color: Theme.of(context).colorScheme.error,
-            child: Icon(Icons.camera_alt_outlined),
-          ),
-        );
+        return _mediaErrorWidget(width, height, context);
       },
     );
   }

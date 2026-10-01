@@ -6,8 +6,8 @@ class ImageThumbnailWidget extends StatelessWidget {
     super.key,
     required this.onTap,
     required this.file,
-    double? borderRadius
-  }): borderRadius = borderRadius??0;
+    double? borderRadius,
+  }) : borderRadius = borderRadius ?? 0;
   final double borderRadius;
   final void Function(XFile file) onTap;
   final XFile file;
