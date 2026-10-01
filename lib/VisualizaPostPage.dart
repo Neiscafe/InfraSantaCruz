@@ -1,18 +1,19 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:myapp/AuthRepository.dart';
 
 import 'Comentario.dart';
+import 'Consts.dart';
 import 'DisplayPictureScreen.dart';
 import 'DisplayVideoScreen.dart';
 import 'Post.dart';
 import 'PostsRepository.dart';
-import 'VideoThumbnailWidget.dart';
+import 'UserPage.dart';
 
 class VisualizaPostPage extends StatefulWidget {
   final Post post;
@@ -944,6 +945,9 @@ class FeedMediaItem extends StatefulWidget {
 }
 
 class _FeedMediaItemState extends State<FeedMediaItem> {
+  Future<File>? _thumbFuture;
+  bool _abrindo = false;
+
   String get url => widget.midia.publicUrl;
 
   String get mimeType => widget.midia.mime;
@@ -961,126 +965,21 @@ class _FeedMediaItemState extends State<FeedMediaItem> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    if (mimeType.contains("video/")) {
+      _thumbFuture = PostsRepository.thumbnailVideo(widget.midia);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Builder(
       builder: (context) {
         if (mimeType.contains("image/")) {
-          return CachedNetworkImage(
-            fit: BoxFit.fill,
-            imageUrl: url,
-            imageBuilder: (context, provider) {
-              return GestureDetector(
-                onTap: () {
-                  DefaultCacheManager().getFileFromCache(url).then((fileInfo) {
-                    if (!context.mounted) {
-                      return;
-                    }
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) {
-                          return DisplayPictureScreen(
-                            imagePath: fileInfo!.file.path,
-                          );
-                        },
-                      ),
-                    );
-                  });
-                },
-                child: Container(
-                  width: width,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    image: DecorationImage(image: provider, fit: BoxFit.fill),
-                  ),
-                  height: height,
-                ),
-              );
-            },
-            placeholder: (context, url) {
-              return Card(
-                margin: EdgeInsets.all(0),
-                child: Container(
-                  width: width,
-                  height: height,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  ),
-                ),
-              );
-            },
-            errorWidget: (context, url, error) {
-              return SizedBox(
-                width: width,
-                height: height,
-                child: Card(
-                  color: Theme.of(context).colorScheme.error,
-                  child: Icon(Icons.camera_alt_outlined),
-                ),
-              );
-            },
-          );
+          return _imageWidget();
         } else if (mimeType.contains("video/")) {
-          return FutureBuilder(
-            future: PostsRepository.downloadVideo(widget.midia),
-            builder: (context, snapshot) {
-              final file = snapshot.data != null
-                  ? XFile(snapshot.data!.path)
-                  : null;
-              if (!snapshot.hasError && !snapshot.hasData) {
-                return Card(
-                  margin: EdgeInsets.all(0),
-                  child: Container(
-                    width: width,
-                    height: height,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    ),
-                  ),
-                );
-              }
-              if (snapshot.hasError) {
-                return SizedBox(
-                  width: width,
-                  height: height,
-                  child: Card(
-                    color: Theme.of(context).colorScheme.error,
-                    child: Center(
-                      child: Icon(Icons.video_camera_back_outlined),
-                    ),
-                  ),
-                );
-              }
-              return SizedBox(
-                width: width,
-                height: height,
-                child: Card(
-                  child: InkWell(
-                    onTapUp: (_) => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DisplayVideoScreen(
-                          imagePath: file!.path,
-                          readOnly: true,
-                        ),
-                      ),
-                    ),
-                    child: VideoThumbnailWidget(
-                      file: XFile(snapshot.data!.path),
-                    ),
-                  ),
-                ),
-              );
-            },
-          );
+          return _videoWidget();
         } else {
           return SizedBox(
             width: width,
@@ -1089,6 +988,142 @@ class _FeedMediaItemState extends State<FeedMediaItem> {
           );
         }
       },
+    );
+  }
+
+  Widget _videoWidget() {
+    return FutureBuilder<File>(
+      future: _thumbFuture,
+      initialData: PostsRepository.thumbnailEmCache(widget.midia),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return _errorWidget(context);
+        }
+        if (!snapshot.hasData) {
+          return _loadingWidget();
+        }
+        return SizedBox(
+          width: width,
+          height: height,
+          child: Card(
+            margin: EdgeInsets.zero,
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: _abrirVideo,
+              child: Stack(
+                fit: StackFit.expand,
+                alignment: Alignment.center,
+                children: [
+                  Image.file(
+                    snapshot.requireData,
+                    fit: BoxFit.cover,
+                    width: width,
+                    height: height,
+                  ),
+                  Center(
+                    child: _abrindo
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Icon(
+                            Icons.play_circle,
+                            color: Colors.white,
+                            size: 48,
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _abrirVideo() async {
+    if (_abrindo) return;
+    setState(() => _abrindo = true);
+    try {
+      final file = await PostsRepository.downloadVideo(widget.midia);
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              DisplayVideoScreen(imagePath: file.path, readOnly: true),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(Consts.ERROR)));
+    } finally {
+      if (mounted) setState(() => _abrindo = false);
+    }
+  }
+
+  CachedNetworkImage _imageWidget() {
+    return CachedNetworkImage(
+      fit: BoxFit.fill,
+      imageUrl: url,
+      imageBuilder: (context, provider) {
+        return GestureDetector(
+          onTap: () {
+            DefaultCacheManager().getFileFromCache(url).then((fileInfo) {
+              if (!context.mounted) {
+                return;
+              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) {
+                    return DisplayPictureScreen(imagePath: fileInfo!.file.path);
+                  },
+                ),
+              );
+            });
+          },
+          child: Container(
+            width: width,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              image: DecorationImage(image: provider, fit: BoxFit.fill),
+            ),
+            height: height,
+          ),
+        );
+      },
+      placeholder: (context, url) {
+        return _loadingWidget();
+      },
+      errorWidget: (context, url, error) {
+        return _errorWidget(context);
+      },
+    );
+  }
+
+  Card _loadingWidget() {
+    return Card(
+      margin: EdgeInsets.all(0),
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10)),
+      ),
+    );
+  }
+
+  SizedBox _errorWidget(BuildContext context) {
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Card(
+        color: Theme.of(context).colorScheme.error,
+        child: Icon(Icons.camera_alt_outlined),
+      ),
     );
   }
 }
