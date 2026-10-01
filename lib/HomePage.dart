@@ -393,21 +393,48 @@ class _PostCardWidgetState extends State<PostCardWidget> {
 
   Widget _postInteractionControls() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        IconButton(
-          onPressed: _onLikeToggled,
-          icon: Icon(
-            curtido ? Icons.favorite : Icons.favorite_border,
-            color: curtido ? Colors.red : Colors.grey,
+        TextButton(
+          onPressed: widget.navega,
+          style: IconButton.styleFrom(
+            minimumSize: Size.square(20),
+            backgroundColor: Colors.transparent,
+          ),
+          child: Row(
+            spacing: 12,
+            children: [
+              Icon(
+                Icons.comment_outlined,
+                color: Colors.grey,
+              ),
+              Text(
+                "$numComentarios",
+                style: TextStyle(fontSize: 16, color: Colors.grey[900]),
+              ),
+            ],
           ),
         ),
-        Text("$numCurtidas"),
-        IconButton(
-          onPressed: widget.navega,
-          icon: Icon(Icons.comment_outlined, color: Colors.grey),
-        ),
-        Text("$numComentarios"),
+        TextButton(
+          onPressed: _onLikeToggled,
+          style: IconButton.styleFrom(
+            minimumSize: Size.square(20),
+            backgroundColor: Colors.transparent,
+          ),
+          child: Row(
+            spacing: 12,
+            children: [
+              Icon(
+                curtido ? Icons.favorite : Icons.favorite_border,
+                color: curtido ? Colors.red : Colors.grey,
+              ),
+              Text(
+                "$numCurtidas",
+                style: TextStyle(fontSize: 16, color: Colors.grey[900]),
+              ),
+            ],
+          ),
+        )
       ],
     );
   }

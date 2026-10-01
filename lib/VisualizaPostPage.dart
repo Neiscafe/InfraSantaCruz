@@ -34,6 +34,263 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
   final ScrollController scrollController = ScrollController();
   final comentarioController = TextEditingController();
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Post")),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _usuarioWidget(),
+                  Text(
+                    post.titulo,
+                    style: TextStyle(color: Colors.black, fontSize: 24),
+                  ),
+                  Text(
+                    post.descricao,
+                    style: TextStyle(color: Colors.black, fontSize: 18),
+                  ),
+                  SizedBox(height: 12),
+                  Row(
+                    children: [Icon(Icons.date_range), _dataPostagemWidget()],
+                  ),
+                  Row(
+                    children: [
+                      Icon(Icons.place),
+                      Text(
+                        "${post.bairro}, ${post.rua}, ${post.referenciaLocalizacao}",
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 12),
+                ],
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: post.jsonMidias.length,
+                  itemBuilder: (context, index) {
+                    return FeedMediaItem(
+                      midia: post.jsonMidias[index],
+                      width: 200,
+                      height: 200,
+                    );
+                  },
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: exibeEscreverComentario,
+                    style: IconButton.styleFrom(
+                      minimumSize: Size.square(20),
+                      backgroundColor: Colors.transparent,
+                    ),
+                    child: Row(
+                      spacing: 12,
+                      children: [
+                        Icon(Icons.comment_outlined, color: Colors.grey),
+                        Text(
+                          "${post.totalComentarios}",
+                          style: TextStyle(fontSize: 16, color: Colors.grey[900]),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      if (post.curtidoPorMim) {
+                        descurtePost(post);
+                      } else {
+                        curtePost(post);
+                      }
+                    },
+                    style: IconButton.styleFrom(
+                      minimumSize: Size.square(20),
+                      backgroundColor: Colors.transparent,
+                    ),
+                    child: Row(
+                      spacing: 12,
+                      children: [
+                        Icon(
+                          post.curtidoPorMim
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          color: post.curtidoPorMim ? Colors.red : Colors.grey,
+                        ),
+                        Text(
+                          post.totalCurtidas.toString(),
+                          style: TextStyle(fontSize: 16, color: Colors.grey[900]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SliverToBoxAdapter(child: _escreverComentarioWidget()),
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                childCount: comments.length,
+                (context, index) {
+                  return _comentarioWidget(index);
+                },
+              ),
+            ),
+            if (!finalPage && !silentLoading && !loading)
+              SliverToBoxAdapter(
+                child: Center(
+                  child: TextButton(
+                    onPressed: () {
+                      listCommentsSilently(context);
+                    },
+                    child: Row(
+                      spacing: 4,
+                      children: [Icon(Icons.add), Text("Ver mais")],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Row _usuarioWidget() {
+    return Row(
+      children: [
+        CachedNetworkImage(
+          width: 40,
+          height: 40,
+          imageUrl: post.usuario.urlAvatar ?? "",
+          imageBuilder: (context, provider) {
+            return Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                image: DecorationImage(image: provider, fit: BoxFit.fill),
+              ),
+            );
+          },
+          placeholder: (context, url) => Icon(Icons.account_circle),
+        ),
+        SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                post.usuario.fullName,
+                style: TextStyle(color: Colors.black, fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Builder _dataPostagemWidget() {
+    return Builder(
+      builder: (context) {
+        String text;
+        var createdDateTime = post.createdDateTime;
+        int epochPost = createdDateTime.millisecondsSinceEpoch;
+        int epochNow = DateTime.now().millisecondsSinceEpoch;
+        int diffNowPost = epochNow - epochPost;
+        int vinteQuatroHoras = 86400000;
+        int sessentaMinutos = 60000;
+        if (diffNowPost < sessentaMinutos) {
+          text = "Postado ${(diffNowPost / 1000 / 60).toInt()} minutos atrás";
+        } else if (diffNowPost <= vinteQuatroHoras) {
+          text =
+              "Postado ${(diffNowPost / 1000 / 60 / 60).toInt()} horas atrás";
+        } else {
+          String day = "${createdDateTime.day}".padLeft(2, '0');
+          String month = "${createdDateTime.month}".padLeft(2, '0');
+          String hour = "${createdDateTime.hour}".padLeft(2, '0');
+          String minute = "${createdDateTime.minute}".padLeft(2, '0');
+          text = "Postado em $day/$month/${createdDateTime.year} $hour:$minute";
+        }
+        return Text(text);
+      },
+    );
+  }
+
+  Padding _comentarioWidget(int index) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
+      child: CommentItem(
+        canExpand: true,
+        comentario: comments[index],
+        carregaRespostas: (Comentario comentario) {
+          String? maisAntiga = null;
+          if (comentario.respostas.isNotEmpty) {
+            var ordenada = comentario.respostas.toList();
+            ordenada.sort(
+              (c1, c2) => c1.createdDateTime.compareTo(c2.createdDateTime),
+            );
+            maisAntiga = ordenada.last.createdAt;
+          }
+          carregaRespostas(comentario, maisAntiga);
+        },
+        escreverResposta: (Comentario comentarioResposta) {
+          exibeEscreverResposta(comments[index], comentarioResposta);
+        },
+        curteComentario: curteComentario,
+        descurteComentario: descurteComentario,
+      ),
+    );
+  }
+
+  Column _escreverComentarioWidget() {
+    return Column(
+      children: [
+        SizedBox(height: 20),
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Expanded(
+              child: Card.filled(
+                margin: EdgeInsetsGeometry.all(0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTapUp: (details) {
+                    exibeEscreverComentario();
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text("Escreva um comentário"),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 20),
+      ],
+    );
+  }
+
   void descurteComentario(Comentario comentario) async {
     try {
       setState(() {
@@ -414,255 +671,6 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Post")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      CachedNetworkImage(
-                        width: 40,
-                        height: 40,
-                        imageUrl: post.usuario.urlAvatar ?? "",
-                        imageBuilder: (context, provider) {
-                          return Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(20),
-                              image: DecorationImage(
-                                image: provider,
-                                fit: BoxFit.fill,
-                              ),
-                            ),
-                          );
-                        },
-                        placeholder: (context, url) =>
-                            Icon(Icons.account_circle),
-                      ),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              post.usuario.fullName,
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          post.titulo,
-                          style: TextStyle(color: Colors.black, fontSize: 24),
-                        ),
-                      ),
-                      Text(post.totalCurtidas.toString()),
-                      TextButton(
-                        onPressed: () {
-                          if (post.curtidoPorMim) {
-                            descurtePost(post);
-                          } else {
-                            curtePost(post);
-                          }
-                        },
-                        style: IconButton.styleFrom(
-                          minimumSize: Size.square(20),
-                          backgroundColor: Colors.transparent,
-                          foregroundColor: post.curtidoPorMim
-                              ? Colors.red
-                              : Colors.grey,
-                        ),
-                        child: Icon(
-                          post.curtidoPorMim
-                              ? Icons.favorite
-                              : Icons.favorite_border,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    post.descricao,
-                    style: TextStyle(color: Colors.black, fontSize: 18),
-                  ),
-                  SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(Icons.date_range),
-                      Builder(
-                        builder: (context) {
-                          String text;
-                          var createdDateTime = post.createdDateTime;
-                          int epochPost =
-                              createdDateTime.millisecondsSinceEpoch;
-                          int epochNow = DateTime.now().millisecondsSinceEpoch;
-                          int diffNowPost = epochNow - epochPost;
-                          int vinteQuatroHoras = 86400000;
-                          int sessentaMinutos = 60000;
-                          if (diffNowPost < sessentaMinutos) {
-                            text =
-                                "Postado ${(diffNowPost / 1000 / 60).toInt()} minutos atrás";
-                          } else if (diffNowPost <= vinteQuatroHoras) {
-                            text =
-                                "Postado ${(diffNowPost / 1000 / 60 / 60).toInt()} horas atrás";
-                          } else {
-                            String day = "${createdDateTime.day}".padLeft(
-                              2,
-                              '0',
-                            );
-                            String month = "${createdDateTime.month}".padLeft(
-                              2,
-                              '0',
-                            );
-                            String hour = "${createdDateTime.hour}".padLeft(
-                              2,
-                              '0',
-                            );
-                            String minute = "${createdDateTime.minute}".padLeft(
-                              2,
-                              '0',
-                            );
-                            text =
-                                "Postado em $day/$month/${createdDateTime.year} $hour:$minute";
-                          }
-                          return Text(text);
-                        },
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Icon(Icons.place),
-                      Text(
-                        "${post.bairro}, ${post.rua}, ${post.referenciaLocalizacao}",
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 12),
-                ],
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 200,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: post.jsonMidias.length,
-                  itemBuilder: (context, index) {
-                    return FeedMediaItem(
-                      midia: post.jsonMidias[index],
-                      width: 200,
-                      height: 200,
-                    );
-                  },
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Column(
-                children: [
-                  SizedBox(height: 20),
-                  Row(
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      Expanded(
-                        child: Card.filled(
-                          margin: EdgeInsetsGeometry.all(0),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(20),
-                            onTapUp: (details) {
-                              exibeEscreverComentario();
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                child: Text("Escreva um comentário"),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 20),
-                ],
-              ),
-            ),
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                childCount: comments.length,
-                (context, index) {
-                  return Padding(
-                    padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
-                    child: CommentItem(
-                      canExpand: true,
-                      comentario: comments[index],
-                      carregaRespostas: (Comentario comentario) {
-                        String? maisAntiga = null;
-                        if (comentario.respostas.isNotEmpty) {
-                          var ordenada = comentario.respostas.toList();
-                          ordenada.sort(
-                            (c1, c2) => c1.createdDateTime.compareTo(
-                              c2.createdDateTime,
-                            ),
-                          );
-                          maisAntiga = ordenada.last.createdAt;
-                        }
-                        carregaRespostas(comentario, maisAntiga);
-                      },
-                      escreverResposta: (Comentario comentarioResposta) {
-                        exibeEscreverResposta(
-                          comments[index],
-                          comentarioResposta,
-                        );
-                      },
-                      curteComentario: curteComentario,
-                      descurteComentario: descurteComentario,
-                    ),
-                  );
-                },
-              ),
-            ),
-            if (!finalPage && !silentLoading && !loading)
-              SliverToBoxAdapter(
-                child: Center(
-                  child: TextButton(
-                    onPressed: () {
-                      listCommentsSilently(context);
-                    },
-                    child: Row(
-                      spacing: 4,
-                      children: [Icon(Icons.add), Text("Ver mais")],
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _onLikeToggled(bool novoCurtido) {
     _initialCurtidoPorMim ??= post.curtidoPorMim;
 
@@ -751,109 +759,19 @@ class _CommentItemState extends State<CommentItem> {
           spacing: 8,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CachedNetworkImage(
-              width: 40,
-              height: 40,
-              imageUrl: comentario.usuario.urlAvatar ?? "",
-              imageBuilder: (context, provider) {
-                return Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    image: DecorationImage(image: provider, fit: BoxFit.fill),
-                  ),
-                );
-              },
-              placeholder: (context, url) => Icon(Icons.account_circle),
-            ),
+            _fotoUsuarioComentarioWidget(),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    comentario.usuario.fullName,
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  Text.rich(
-                    TextSpan(
-                      children: [
-                        if (comentario.commentAboveId != null)
-                          TextSpan(
-                            text: "@${comentario.replyUsername}",
-                            style: TextStyle(color: Colors.blue),
-                          ),
-                        TextSpan(text: " ${comentario.text}"),
-                      ],
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      TextButton(
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.black,
-                        ),
-                        onPressed: () {
-                          widget.escreverResposta(comentario);
-                        },
-                        child: Text("Responder"),
-                      ),
-                      if (comentario.comentariosAbaixo > 0 && !expandido)
-                        TextButton(
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.grey,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              aguardandoRespostas = true;
-                            });
-                            widget.carregaRespostas(comentario);
-                          },
-                          child: Row(
-                            children: [
-                              Icon(Icons.keyboard_arrow_up),
-                              Text(
-                                "Ver respostas (${comentario.comentariosAbaixo})",
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
+                  _usuarioComentarioWidget(),
+                  _comentarioWidget(),
+                  _controlaRespostasWidget(),
                 ],
               ),
             ),
 
-            Row(
-              children: [
-                Text(comentario.curtidas.toString()),
-                TextButton(
-                  onPressed: () {
-                    if (comentario.curtidoPorMim) {
-                      widget.descurteComentario(comentario);
-                    } else {
-                      widget.curteComentario(comentario);
-                    }
-                  },
-                  style: IconButton.styleFrom(
-                    minimumSize: Size.square(20),
-                    backgroundColor: Colors.transparent,
-                    foregroundColor: comentario.curtidoPorMim
-                        ? Colors.red
-                        : Colors.grey,
-                  ),
-                  child: Icon(
-                    comentario.curtidoPorMim
-                        ? Icons.favorite
-                        : Icons.favorite_border,
-                  ),
-                ),
-              ],
-            ),
+            _curteComentarioWidget(),
           ],
         ),
         if (expandido)
@@ -871,6 +789,107 @@ class _CommentItemState extends State<CommentItem> {
             ),
           ],
       ],
+    );
+  }
+
+  CachedNetworkImage _fotoUsuarioComentarioWidget() {
+    return CachedNetworkImage(
+      width: 40,
+      height: 40,
+      imageUrl: comentario.usuario.urlAvatar ?? "",
+      imageBuilder: (context, provider) {
+        return Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            image: DecorationImage(image: provider, fit: BoxFit.fill),
+          ),
+        );
+      },
+      placeholder: (context, url) => Icon(Icons.account_circle),
+    );
+  }
+
+  Text _usuarioComentarioWidget() {
+    return Text(
+      comentario.usuario.fullName,
+      style: TextStyle(
+        color: Colors.black,
+        fontWeight: FontWeight.bold,
+        fontSize: 14,
+      ),
+    );
+  }
+
+  Text _comentarioWidget() {
+    return Text.rich(
+      TextSpan(
+        children: [
+          if (comentario.commentAboveId != null)
+            TextSpan(
+              text: "@${comentario.replyUsername}",
+              style: TextStyle(color: Colors.blue),
+            ),
+          TextSpan(text: " ${comentario.text}"),
+        ],
+      ),
+    );
+  }
+
+  Row _controlaRespostasWidget() {
+    return Row(
+      children: [
+        TextButton(
+          style: TextButton.styleFrom(foregroundColor: Colors.black),
+          onPressed: () {
+            widget.escreverResposta(comentario);
+          },
+          child: Text("Responder"),
+        ),
+        if (comentario.comentariosAbaixo > 0 && !expandido)
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.grey),
+            onPressed: () {
+              setState(() {
+                aguardandoRespostas = true;
+              });
+              widget.carregaRespostas(comentario);
+            },
+            child: Row(
+              children: [
+                Icon(Icons.keyboard_arrow_up),
+                Text("Ver respostas (${comentario.comentariosAbaixo})"),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  TextButton _curteComentarioWidget() {
+    return TextButton(
+      onPressed: () {
+        if (comentario.curtidoPorMim) {
+          widget.descurteComentario(comentario);
+        } else {
+          widget.curteComentario(comentario);
+        }
+      },
+      style: IconButton.styleFrom(
+        minimumSize: Size.square(20),
+        backgroundColor: Colors.transparent,
+      ),
+      child: Row(
+        spacing: 12,
+        children: [
+          Icon(
+            comentario.curtidoPorMim ? Icons.favorite : Icons.favorite_border,
+            color: comentario.curtidoPorMim ? Colors.red : Colors.grey,
+          ),
+          Text(comentario.curtidas.toString(), style: TextStyle(fontSize: 16, color: Colors.grey[900])),
+        ],
+      ),
     );
   }
 }
