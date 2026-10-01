@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:ui';
 
@@ -30,6 +31,7 @@ class _HomePageState extends State<HomePage> {
   bool silentLoading = false;
   int currentPage = 0;
   bool finalPage = false;
+  StreamSubscription<Post>? _streamSubscription;
   final ScrollController scrollController = ScrollController();
 
   @override
@@ -50,6 +52,19 @@ class _HomePageState extends State<HomePage> {
         listPostsSilently(this.context, currentPage);
       }
     });
+    _streamSubscription = PostsRepository.onPostUpdated.listen((Post post) {
+      setState(() {
+        var _posts = List.of(posts);
+        _posts[posts.indexWhere((post2) => post2.id == post.id)] = post;
+        posts = _posts;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _streamSubscription?.cancel();
+    super.dispose();
   }
 
   @override
@@ -195,20 +210,89 @@ class PostCardWidget extends StatefulWidget {
 }
 
 class _PostCardWidgetState extends State<PostCardWidget> {
-  bool curtido = false;
-  int numCurtidas = 0;
-  int numComentarios = 0;
+  late bool curtido;
+  late int numCurtidas;
+  late int numComentarios;
+  Timer? _likeDebounceTimer;
+  bool? _initialCurtido;
 
   Post get post => widget.post;
 
   @override
   void initState() {
     super.initState();
+    _syncWithWidget();
+  }
+
+  @override
+  void didUpdateWidget(covariant PostCardWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.post != widget.post ||
+        oldWidget.post.curtidoPorMim != widget.post.curtidoPorMim ||
+        oldWidget.post.totalCurtidas != widget.post.totalCurtidas ||
+        oldWidget.post.totalComentarios != widget.post.totalComentarios) {
+      _syncWithWidget();
+    }
+  }
+
+  void _syncWithWidget() {
     setState(() {
       curtido = post.curtidoPorMim;
       numCurtidas = post.totalCurtidas;
       numComentarios = post.totalComentarios;
     });
+  }
+
+  void _onLikeToggled() {
+    _initialCurtido ??= curtido;
+
+    final novoCurtido = !curtido;
+    final novoNumCurtidas = novoCurtido ? numCurtidas + 1 : numCurtidas - 1;
+
+    final updatedPost = post.copy(
+      curtidoPorMim: novoCurtido,
+      totalCurtidas: novoNumCurtidas,
+    );
+
+    setState(() {
+      curtido = novoCurtido;
+      numCurtidas = novoNumCurtidas;
+    });
+
+    PostsRepository.notifyPostUpdated(updatedPost);
+
+    _likeDebounceTimer?.cancel();
+    _likeDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _syncLikeWithServer();
+    });
+  }
+
+  void _syncLikeWithServer() {
+    _likeDebounceTimer?.cancel();
+    _likeDebounceTimer = null;
+
+    if (_initialCurtido != null && _initialCurtido != curtido) {
+      final finalState = curtido;
+      _initialCurtido = finalState;
+      final currentPost = post.copy(
+        curtidoPorMim: finalState,
+        totalCurtidas: numCurtidas,
+      );
+      if (finalState) {
+        PostsRepository.curtePost(currentPost);
+      } else {
+        PostsRepository.descurtePost(currentPost);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_likeDebounceTimer != null && _likeDebounceTimer!.isActive) {
+      _syncLikeWithServer();
+    }
+    _likeDebounceTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -312,22 +396,7 @@ class _PostCardWidgetState extends State<PostCardWidget> {
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
         IconButton(
-          onPressed: () {
-            if (curtido) {
-              PostsRepository.descurtePost(post);
-            } else {
-              PostsRepository.curtePost(post);
-            }
-            setState(() {
-              final novo = !curtido;
-              curtido = novo;
-              if (novo) {
-                numCurtidas++;
-              } else {
-                numCurtidas--;
-              }
-            });
-          },
+          onPressed: _onLikeToggled,
           icon: Icon(
             curtido ? Icons.favorite : Icons.favorite_border,
             color: curtido ? Colors.red : Colors.grey,

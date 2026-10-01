@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:myapp/AuthRepository.dart';
 import 'package:myapp/HomePage.dart';
@@ -24,6 +25,7 @@ class _UserPageState extends State<UserPage> {
   bool silentLoading = false;
   int currentPage = 0;
   bool finalPage = false;
+  StreamSubscription<Post>? _streamSubscription;
   final ScrollController scrollController = ScrollController();
 
   @override
@@ -44,6 +46,26 @@ class _UserPageState extends State<UserPage> {
         listPostsSilently(this.context, currentPage);
       }
     });
+    _streamSubscription = PostsRepository.onPostUpdated.listen((
+      Post updatedPost,
+    ) {
+      if (!mounted) return;
+      final index = posts.indexWhere((p) => p.id == updatedPost.id);
+      if (index != -1) {
+        setState(() {
+          var _posts = List.of(posts);
+          _posts[index] = updatedPost;
+          posts = _posts;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _streamSubscription?.cancel();
+    scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> refreshPosts(BuildContext context) async {
@@ -247,7 +269,9 @@ class _UserPageState extends State<UserPage> {
               ),
               TextButton(
                 style: TextButton.styleFrom(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadiusGeometry.circular(8),
+                  ),
                   backgroundColor: Colors.red[100],
                   foregroundColor: Colors.red,
                 ),

@@ -38,6 +38,15 @@ class Endereco extends FiltroPosts {
 enum TipoEndereco { rua, bairro }
 
 class PostsRepository {
+  static final StreamController<Post> _postUpdatedController =
+      StreamController<Post>.broadcast();
+
+  static Stream<Post> get onPostUpdated => _postUpdatedController.stream;
+
+  static void notifyPostUpdated(Post post) {
+    _postUpdatedController.add(post);
+  }
+
   static SupabaseClient get client => Supabase.instance.client;
 
   static SupabaseStorageClient get storage => client.storage;

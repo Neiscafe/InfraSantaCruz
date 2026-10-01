@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -23,7 +24,9 @@ class VisualizaPostPage extends StatefulWidget {
 }
 
 class _VisualizaPostPageState extends State<VisualizaPostPage> {
-  Post get post => widget.post;
+  late Post post;
+  Timer? _likeDebounceTimer;
+  bool? _initialCurtidoPorMim;
   bool finalPage = false;
   bool loading = true;
   bool silentLoading = false;
@@ -122,11 +125,16 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
   Future<void> escreverComentario(Comentario comentario) async {
     try {
       final response = await PostsRepository.criaComentario(comentario);
+      final updatedPost = post.copy(
+        totalComentarios: post.totalComentarios + 1,
+      );
       setState(() {
+        post = updatedPost;
         var _comments = comments.toList();
         _comments.insert(0, response);
         comments = _comments;
       });
+      PostsRepository.notifyPostUpdated(updatedPost);
       if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -389,12 +397,20 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
   @override
   void initState() {
     super.initState();
+    setState(() {
+      post = widget.post;
+    });
     listComments(context);
   }
 
   @override
   void dispose() {
+    if (_likeDebounceTimer != null && _likeDebounceTimer!.isActive) {
+      _syncLikeWithServer();
+    }
+    _likeDebounceTimer?.cancel();
     comentarioController.dispose();
+    scrollController.dispose();
     super.dispose();
   }
 
@@ -647,24 +663,51 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
     );
   }
 
-  void descurtePost(Post post) {
+  void _onLikeToggled(bool novoCurtido) {
+    _initialCurtidoPorMim ??= post.curtidoPorMim;
+
+    final newTotalCurtidas = novoCurtido
+        ? (post.curtidoPorMim ? post.totalCurtidas : post.totalCurtidas + 1)
+        : (post.curtidoPorMim ? post.totalCurtidas - 1 : post.totalCurtidas);
+
+    final updatedPost = post.copy(
+      curtidoPorMim: novoCurtido,
+      totalCurtidas: newTotalCurtidas,
+    );
+
     setState(() {
-      post = post.copy(
-        curtidoPorMim: false,
-        totalCurtidas: post.totalCurtidas - 1,
-      );
+      post = updatedPost;
     });
-    PostsRepository.descurtePost(post);
+    PostsRepository.notifyPostUpdated(updatedPost);
+
+    _likeDebounceTimer?.cancel();
+    _likeDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _syncLikeWithServer();
+    });
   }
 
-  void curtePost(Post post) {
-    setState(() {
-      post = post.copy(
-        curtidoPorMim: true,
-        totalCurtidas: post.totalCurtidas + 1,
-      );
-    });
-    PostsRepository.curtePost(post);
+  void _syncLikeWithServer() {
+    _likeDebounceTimer?.cancel();
+    _likeDebounceTimer = null;
+
+    if (_initialCurtidoPorMim != null &&
+        _initialCurtidoPorMim != post.curtidoPorMim) {
+      final finalState = post.curtidoPorMim;
+      _initialCurtidoPorMim = finalState;
+      if (finalState) {
+        PostsRepository.curtePost(post);
+      } else {
+        PostsRepository.descurtePost(post);
+      }
+    }
+  }
+
+  void descurtePost(Post targetPost) {
+    _onLikeToggled(false);
+  }
+
+  void curtePost(Post targetPost) {
+    _onLikeToggled(true);
   }
 }
 
