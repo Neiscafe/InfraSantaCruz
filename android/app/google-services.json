@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "642881998952",
+    "project_id": "infrasantacruz-4f2dc",
+    "storage_bucket": "infrasantacruz-4f2dc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:642881998952:android:d1782a41d1221114cd2bdd",
+        "android_client_info": {
+          "package_name": "br.com.infrasantacruz.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBB5prDdIWIaaMELatA52_HiPTyqgjYgXk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
