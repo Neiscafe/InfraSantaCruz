@@ -194,21 +194,30 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
   Row _usuarioWidget() {
     return Row(
       children: [
-        CachedNetworkImage(
-          width: 40,
-          height: 40,
-          imageUrl: post.usuario.urlAvatar ?? "",
-          imageBuilder: (context, provider) {
-            return Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                image: DecorationImage(image: provider, fit: BoxFit.fill),
+        GestureDetector(
+          onTapUp: (_) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (contenxt) => UserPage(user: post.usuario),
               ),
             );
           },
-          placeholder: (context, url) => Icon(Icons.account_circle),
+          child: CachedNetworkImage(
+            width: 40,
+            height: 40,
+            imageUrl: post.usuario.urlAvatar ?? "",
+            imageBuilder: (context, provider) {
+              return Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  image: DecorationImage(image: provider, fit: BoxFit.fill),
+                ),
+              );
+            },
+            placeholder: (context, url) => Icon(Icons.account_circle),
+          ),
         ),
         SizedBox(width: 8),
         Expanded(
@@ -218,6 +227,10 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
               Text(
                 post.usuario.fullName,
                 style: TextStyle(color: Colors.black, fontSize: 14),
+              ),
+              Text(
+                "@${post.usuario.fullName.replaceAll(" ", "")}",
+                style: TextStyle(color: Colors.blue, fontSize: 12),
               ),
             ],
           ),
