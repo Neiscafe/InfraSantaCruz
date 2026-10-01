@@ -8,10 +8,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Supabase.initialize(
-      url: 'https://yombhmzdpmffekqhdtrv.supabase.co',
-      anonKey: 'sb_publishable_WnnTd11M1Lv_n5ookD45uQ_ZJYzav3l',
-    );
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(

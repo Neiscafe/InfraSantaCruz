@@ -13,5 +13,9 @@ import 'package:video_player/video_player.dart';
 final supabase = Supabase.instance.client;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  Supabase.initialize(
+    url: 'https://yombhmzdpmffekqhdtrv.supabase.co',
+    anonKey: 'sb_publishable_WnnTd11M1Lv_n5ookD45uQ_ZJYzav3l',
+  );
   runApp(MyApp());
 }
