@@ -294,8 +294,8 @@ class PostsRepository {
       }
       var response = await query
           .eq("comment_above_id", comentario.commentId)
-          .order("created_at", ascending: false)
-          .order("comment_id", ascending: false)
+          .order("created_at", ascending: true)
+          .order("comment_id", ascending: true)
           .limit(20);
       return response.map((item) => Comentario.fromJson(item)).toList();
     } catch (e, trace) {
@@ -324,7 +324,9 @@ class PostsRepository {
       final response = await client
           .from("post_comments")
           .insert(comentario.toJson())
-          .select("*, usuario:users!post_comments_usuario_id_fkey(*)");
+          .select(
+            "*, usuario:users!post_comments_usuario_id_fkey(*), reply_username:users!post_comments_user_reply_id_fkey(full_name)",
+          );
       return response.map((it) => Comentario.fromJson(it)).first;
     } catch (e, trace) {
       debugPrint(trace.toString());

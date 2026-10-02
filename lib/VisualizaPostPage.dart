@@ -33,12 +33,14 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
   final Map<String, bool> _commentInitialCurtido = {};
   final Map<String, Comentario> _commentLatestState = {};
 
+  late final TextEditingController _respostaController;
+
   bool finalPage = false;
   bool loading = true;
   bool silentLoading = false;
   List<Comentario> comments = List.empty();
   final ScrollController scrollController = ScrollController();
-  final comentarioController = TextEditingController();
+  late final _comentarioController;
 
   @override
   Widget build(BuildContext context) {
@@ -520,6 +522,7 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("Ocorreu um erro!")));
+      return;
     }
     setState(() {
       finalPage =
@@ -572,7 +575,6 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
 
   void exibeEscreverComentario() {
     if (!context.mounted) return;
-    final TextEditingController controller = TextEditingController();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -594,7 +596,7 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
               Expanded(
                 child: TextField(
                   autofocus: true,
-                  controller: controller,
+                  controller: _comentarioController,
                   decoration: InputDecoration(
                     hintText: "Escreva um comentário",
                     border: OutlineInputBorder(),
@@ -603,15 +605,15 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
               ),
               ElevatedButton(
                 onPressed: () async {
-                  controller.clear();
-                  Navigator.of(context).pop();
                   await escreverComentario(
                     Comentario(
-                      text: controller.text,
+                      text: _comentarioController.text,
                       postId: post.id,
                       usuario: AuthRepository.usuarioAtual,
                     ),
                   );
+                  _comentarioController.clear();
+                  Navigator.of(context).pop();
                 },
                 child: Icon(Icons.send),
               ),
@@ -627,7 +629,6 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
     Comentario comentarioResposta,
   ) {
     if (!context.mounted) return;
-    final TextEditingController controller = TextEditingController();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -649,7 +650,7 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
               Expanded(
                 child: TextField(
                   autofocus: true,
-                  controller: controller,
+                  controller: _respostaController,
                   decoration: InputDecoration(
                     hintText: "Escreva uma resposta",
                     border: OutlineInputBorder(),
@@ -658,20 +659,21 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
               ),
               ElevatedButton(
                 onPressed: () async {
-                  controller.clear();
-                  Navigator.of(context).pop();
                   await escreverResposta(
                     Comentario(
-                      text: controller.text,
+                      text: _respostaController.text,
                       postId: post.id,
                       commentAboveId: comentarioAcima.commentId,
                       commentReplyId: comentarioResposta.commentId,
                       userReplyId: comentarioResposta.usuario.usuarioId,
+                      replyUsername: comentarioResposta.usuario.fullName,
                       usuario: AuthRepository.usuarioAtual,
                     ),
                     comentarioResposta,
                     comentarioAcima,
                   );
+                  _respostaController.clear();
+                  Navigator.of(context).pop();
                 },
                 child: Icon(Icons.send),
               ),
@@ -688,6 +690,8 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
     setState(() {
       post = widget.post;
     });
+    _respostaController = TextEditingController();
+    _comentarioController = TextEditingController();
     listComments(context);
   }
 
@@ -709,8 +713,9 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
     }
     _commentLikeDebounceTimers.clear();
 
-    comentarioController.dispose();
+    _comentarioController.dispose();
     scrollController.dispose();
+    _respostaController.dispose();
     super.dispose();
   }
 

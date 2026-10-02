@@ -82,7 +82,7 @@ class Comentario {
   static Comentario fromJson(Map<String, dynamic> json) {
     String? replyUsername;
     if (json.containsKey("reply_username") &&
-        json["reply_username"].containsKey("full_name")) {
+        json["reply_username"]?.containsKey("full_name")==true) {
       replyUsername = json["reply_username"]["full_name"];
     }
     return Comentario(
