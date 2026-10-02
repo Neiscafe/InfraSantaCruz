@@ -101,39 +101,45 @@ class AuthRepository {
   }
 
   static Future<void> signInWithOAuth(OAuthProvider provider) async {
-    const webClientId =
-        '331259660582-rm2737abqodpus6cukjokpegi585j66t.apps.googleusercontent.com';
-    const iosClientId =
-        '331259660582-p9gbvr7ptdes9okve2m7vk2ont170379.apps.googleusercontent.com';
+    try {
+      const webClientId =
+          '331259660582-rm2737abqodpus6cukjokpegi585j66t.apps.googleusercontent.com';
+      const iosClientId =
+          '331259660582-p9gbvr7ptdes9okve2m7vk2ont170379.apps.googleusercontent.com';
 
-    final scopes = ['email', 'profile'];
-    final GoogleSignIn googleSignIn = GoogleSignIn.instance;
-    await googleSignIn.initialize(
-      clientId: iosClientId,
-      serverClientId: webClientId,
-    );
+      final scopes = ['email', 'profile'];
+      final GoogleSignIn googleSignIn = GoogleSignIn.instance;
+      await googleSignIn.initialize(
+        clientId: iosClientId,
+        serverClientId: webClientId,
+      );
 
-    final googleUser =
-        await googleSignIn.attemptLightweightAuthentication() ??
-        await googleSignIn.authenticate();
+      final googleUser =
+          await googleSignIn.attemptLightweightAuthentication() ??
+              await googleSignIn.authenticate();
 
-    final authorization =
-        await googleUser.authorizationClient.authorizationForScopes(scopes) ??
-        await googleUser.authorizationClient.authorizeScopes(scopes);
+      final authorization =
+          await googleUser.authorizationClient.authorizationForScopes(scopes) ??
+              await googleUser.authorizationClient.authorizeScopes(scopes);
 
-    final idToken = googleUser.authentication.idToken;
+      final idToken = googleUser.authentication.idToken;
 
-    if (idToken == null) {
-      return;
+      if (idToken == null) {
+        return;
+      }
+
+      await auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: authorization.accessToken,
+      );
+
+      await sendFirebaseToken();
+    } on Exception catch(e, trace){
+      debugPrint(trace.toString());
+      debugPrint(e.toString());
+      throw e;
     }
-
-    await auth.signInWithIdToken(
-      provider: OAuthProvider.google,
-      idToken: idToken,
-      accessToken: authorization.accessToken,
-    );
-
-    await sendFirebaseToken();
   }
 
   static Future<void> logout() async {

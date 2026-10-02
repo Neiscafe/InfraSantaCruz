@@ -37,7 +37,7 @@ class _SplashScreenState extends State<SplashScreen> {
         );
         return;
       }
-      await AuthRepository.sendFirebaseToken();
+      // await AuthRepository.sendFirebaseToken();
       if (!context.mounted) return;
       verificaPermissoes(context).then((concedidas) {
         if (!context.mounted) return;

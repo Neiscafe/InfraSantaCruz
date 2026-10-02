@@ -19,22 +19,24 @@ const AndroidNotificationChannel channel = AndroidNotificationChannel(
 );
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-    FlutterLocalNotificationsPlugin();
+FlutterLocalNotificationsPlugin();
 
 Future<void> showNotificationWithAvatar(RemoteMessage message) async {
   final title =
       message.notification?.title ??
-      message.data['title'] ??
-      'Nova notificação';
+          message.data['title'] ??
+          'Nova notificação';
   final body = message.notification?.body ?? message.data['body'] ?? '';
   final avatarUrl =
       message.data['avatar_url'] ??
-      message.data['user_avatar_url'] ??
-      message.data['avatar'] ??
-      message.data['user_avatar'];
+          message.data['user_avatar_url'] ??
+          message.data['avatar'] ??
+          message.data['user_avatar'];
 
   ByteArrayAndroidBitmap? largeIcon;
-  if (avatarUrl != null && avatarUrl.toString().isNotEmpty) {
+  if (avatarUrl != null && avatarUrl
+      .toString()
+      .isNotEmpty) {
     try {
       final response = await http.get(Uri.parse(avatarUrl.toString()));
       if (response.statusCode == 200) {
@@ -59,7 +61,10 @@ Future<void> showNotificationWithAvatar(RemoteMessage message) async {
 
   final notificationId = message.messageId != null
       ? message.messageId.hashCode
-      : DateTime.now().millisecondsSinceEpoch.remainder(100000);
+      : DateTime
+      .now()
+      .millisecondsSinceEpoch
+      .remainder(100000);
 
   await flutterLocalNotificationsPlugin.show(
     id: notificationId,
@@ -90,7 +95,8 @@ Future<void> main() async {
   );
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
+  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+      alert: true, badge: true, sound: true);
   const initializationSettingsAndroid = AndroidInitializationSettings(
     '@mipmap/ic_launcher',
   );
@@ -105,8 +111,8 @@ Future<void> main() async {
 
   await flutterLocalNotificationsPlugin
       .resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin
-      >()
+      AndroidFlutterLocalNotificationsPlugin
+  >()
       ?.createNotificationChannel(channel);
 
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {

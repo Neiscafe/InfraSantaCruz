@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:myapp/Consts.dart';
 import 'package:myapp/HomePage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -25,7 +26,7 @@ class _LoginPageState extends State<LoginPage> {
     _stream = widget.authStream ?? AuthRepository.onAuthStateChange;
     _authStateSubscription = _stream.listen((authState) {
       if (authState.session != null && mounted) {
-        AuthRepository.sendFirebaseToken();
+        // AuthRepository.sendFirebaseToken();
         if (widget.isRedirect) {
           Navigator.of(context).pop();
         } else {
@@ -44,7 +45,17 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _handleOAuthLogin(OAuthProvider provider) {
-    AuthRepository.signInWithOAuth(provider);
+    try {
+      AuthRepository.signInWithOAuth(provider);
+    } on Exception catch(e){
+      if(!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(Consts.ERROR),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   @override
