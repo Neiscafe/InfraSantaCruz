@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:myapp/AuthRepository.dart';
 import 'package:myapp/HomePage.dart';
@@ -8,21 +10,23 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'PermissaoPage.dart';
 
 class SplashScreen extends StatefulWidget {
-  final Stream<AuthState> stream;
-
-  SplashScreen({Stream<AuthState>? stream, super.key})
-    : stream = stream ?? AuthRepository.onAuthStateChange;
+  SplashScreen({Stream<AuthState>? stream, super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  late StreamSubscription<AuthState> streamSubscription;
+
   @override
   void initState() {
     super.initState();
-    AuthRepository.onAuthStateChange.listen((authState) {
+    streamSubscription = AuthRepository.onAuthStateChange.listen((
+      authState,
+    ) async {
       if (authState.session == null) {
+        if (!context.mounted) return;
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -33,7 +37,10 @@ class _SplashScreenState extends State<SplashScreen> {
         );
         return;
       }
+      await AuthRepository.sendFirebaseToken();
+      if (!context.mounted) return;
       verificaPermissoes(context).then((concedidas) {
+        if (!context.mounted) return;
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -51,9 +58,15 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   @override
+  void dispose() {
+    streamSubscription.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: widget.stream,
+      stream: AuthRepository.onAuthStateChange,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Scaffold(
@@ -106,6 +119,11 @@ class _SplashScreenState extends State<SplashScreen> {
     final location = await Permission.location.isGranted;
     final camera = await Permission.camera.isGranted;
     final microphone = await Permission.microphone.isGranted;
-    return serviceStatus.isEnabled && location && camera && microphone;
+    final notification = await Permission.notification.isGranted;
+    return serviceStatus.isEnabled &&
+        location &&
+        camera &&
+        microphone &&
+        notification;
   }
 }

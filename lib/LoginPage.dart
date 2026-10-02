@@ -1,13 +1,47 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:myapp/HomePage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'AuthRepository.dart';
 
-class LoginPage extends StatelessWidget {
-  final Stream<AuthState> stream;
+class LoginPage extends StatefulWidget {
+  final bool isRedirect;
+  final Stream<AuthState>? authStream;
 
-  LoginPage({Stream<AuthState>? authStream, super.key})
-    : stream = authStream ?? AuthRepository.onAuthStateChange;
+  const LoginPage({super.key, this.isRedirect = false, this.authStream});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  late final Stream<AuthState> _stream;
+  StreamSubscription<AuthState>? _authStateSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _stream = widget.authStream ?? AuthRepository.onAuthStateChange;
+    _authStateSubscription = _stream.listen((authState) {
+      if (authState.session != null && mounted) {
+        AuthRepository.sendFirebaseToken();
+        if (widget.isRedirect) {
+          Navigator.of(context).pop();
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const HomePage()),
+          );
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authStateSubscription?.cancel();
+    super.dispose();
+  }
 
   void _handleOAuthLogin(OAuthProvider provider) {
     AuthRepository.signInWithOAuth(provider);
@@ -23,7 +57,6 @@ class LoginPage extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Sua Logo (conforme configurado nos assets anteriormente)
               Image.asset('assets/icons/logo-icone.png', height: 130),
               const SizedBox(height: 40),
 
@@ -32,7 +65,7 @@ class LoginPage extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF0056b3), // Azul da paleta solicitada
+                  color: Color(0xFF0056b3),
                 ),
               ),
               const SizedBox(height: 10),
@@ -43,17 +76,9 @@ class LoginPage extends StatelessWidget {
               ),
               const SizedBox(height: 50),
 
-              StreamBuilder(
-                stream: stream,
+              StreamBuilder<AuthState>(
+                stream: _stream,
                 builder: (context, snapshot) {
-                  // Loading
-                  // ConnectionState.waiting
-                  // ConnectionState.active(AuthChangeEvent.initialSession(session: session)
-                  // ConnectionState.active(AuthChangeEvent.signedIn(session: session)
-
-                  // Botões
-                  // ConnectionState.active(AuthChangeEvent.initialSession(session: null)
-                  // ConnectionState.active(AuthChangeEvent.signedOut(session: null)
                   if (snapshot.connectionState != ConnectionState.active ||
                       snapshot.data?.session != null) {
                     return const CircularProgressIndicator();
@@ -74,7 +99,7 @@ class LoginPage extends StatelessWidget {
                           icon: Icons.apple,
                           color: Colors.grey,
                           textColor: Colors.black,
-                          onPressed: () => {},
+                          onPressed: () {},
                         ),
                       ],
                     );

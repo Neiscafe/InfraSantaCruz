@@ -8,6 +8,7 @@ class PermissaoPage extends StatelessWidget {
   Future<void> pedePermissoes(BuildContext context) async {
     ServiceStatus serviceStatus = await Permission.location.serviceStatus;
     if (serviceStatus.isDisabled) {
+      if (!context.mounted) return;
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -20,10 +21,7 @@ class PermissaoPage extends StatelessWidget {
               onPressed: () => Navigator.pop(context),
               child: Text("Cancelar"),
             ),
-            TextButton(
-              onPressed: () => {}, // Abre a tela de ajustes do celular
-              child: Text("Ligar"),
-            ),
+            TextButton(onPressed: () => {}, child: Text("Ligar")),
           ],
         ),
       );
@@ -33,11 +31,12 @@ class PermissaoPage extends StatelessWidget {
       Permission.location,
       Permission.camera,
       Permission.microphone,
-      // Nota: No permission_handler, Vídeo é coberto por Camera + Microfone
+      Permission.notification,
     ].request();
 
     bool allGranted = statuses.values.every((status) => status.isGranted);
 
+    if (!context.mounted) return;
     if (allGranted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Todas as permissões concedidas!")),
@@ -65,7 +64,6 @@ class PermissaoPage extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => openAppSettings(),
-            // Abre a tela de ajustes do celular
             child: Text("Configurações"),
           ),
         ],
@@ -90,11 +88,11 @@ class PermissaoPage extends StatelessWidget {
             ),
             SizedBox(height: 15),
             Text(
-              "Para uma experiência completa, precisamos de acesso ao seu GPS, Câmera e Microfone.",
+              "Para usar o aplicativo, precisamos de acesso ao seu GPS, Câmera, Microfone e Notificações.",
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey[600]),
             ),
-            SizedBox(height: 40),
+            SizedBox(height: 30),
             _buildPermissionItem(
               Icons.location_on,
               "Localização",
@@ -106,6 +104,11 @@ class PermissaoPage extends StatelessWidget {
               "Para registrar momentos",
             ),
             _buildPermissionItem(Icons.mic, "Áudio", "Para capturar som"),
+            _buildPermissionItem(
+              Icons.notifications_active,
+              "Notificações",
+              "Para receber avisos e respostas",
+            ),
             Spacer(),
             ElevatedButton(
               onPressed: () => pedePermissoes(context),

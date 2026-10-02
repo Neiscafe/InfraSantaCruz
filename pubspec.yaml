@@ -57,6 +57,10 @@ dependencies:
   image: ^4.9.2
   connectivity_plus: ^7.3.1
   video_thumbnail: ^0.5.6
+  firebase_core: ^4.15.0
+  firebase_messaging: ^16.7.0
+  flutter_local_notifications: ^22.3.1
+  http: ^1.6.0
 
 flutter_native_splash:
   color: "#ffffff" # Cor de fundo (Branco)
