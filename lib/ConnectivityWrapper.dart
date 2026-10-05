@@ -29,8 +29,7 @@ class _ConnectivityWrapperState extends State<ConnectivityWrapper> {
     try {
       final results = await _connectivity.checkConnectivity();
       _updateConnectivityStatus(results);
-    } catch (_) {
-    }
+    } catch (_) {}
   }
 
   void _updateConnectivityStatus(List<ConnectivityResult> results) {

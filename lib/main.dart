@@ -54,7 +54,7 @@ Future<void> showNotificationWithAvatar(RemoteMessage message) async {
     importance: Importance.high,
     priority: Priority.high,
     largeIcon: largeIcon,
-    icon: '@mipmap/ic_launcher',
+    icon: '@drawable/ic_notification',
   );
 
   final notificationDetails = NotificationDetails(android: androidDetails);
@@ -80,7 +80,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await flutterLocalNotificationsPlugin.initialize(
     settings: const InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      android: AndroidInitializationSettings('@drawable/ic_notification'),
       iOS: DarwinInitializationSettings(),
     ),
   );
@@ -98,7 +98,7 @@ Future<void> main() async {
   await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
       alert: true, badge: true, sound: true);
   const initializationSettingsAndroid = AndroidInitializationSettings(
-    '@mipmap/ic_launcher',
+    '@drawable/ic_notification',
   );
 
   const initializationSettings = InitializationSettings(

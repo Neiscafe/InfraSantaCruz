@@ -6,11 +6,14 @@ import 'package:flutter_svg/flutter_svg.dart';
 class Assets {
   Assets._();
 
-  static const AssetGenImage logoIcone = AssetGenImage(
+  static const $AssetsIconsGen icons = $AssetsIconsGen();
+}
+
+class $AssetsIconsGen {
+  const $AssetsIconsGen();
+
+  final AssetGenImage logoIcone = const AssetGenImage(
     'assets/icons/logo-icone.png',
-  );
-  static const AssetGenImage logoTexto = AssetGenImage(
-    'assets/icons/logo-texto.png',
   );
 }
 

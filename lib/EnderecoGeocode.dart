@@ -24,10 +24,10 @@ class EnderecoGeocode {
   static EnderecoGeocode fromJson(Map<String, dynamic> json, LatLong latLong) {
     return EnderecoGeocode(
       numero: json["name"],
-      logradouro: json["thoroughfare"]??"",
-      bairro: json["subLocality"]??"",
-      cidade: json["subAdministrativeArea"]??"",
-      cep: json["postalCode"]??"",
+      logradouro: json["thoroughfare"] ?? "",
+      bairro: json["subLocality"] ?? "",
+      cidade: json["subAdministrativeArea"] ?? "",
+      cep: json["postalCode"] ?? "",
       lat: latLong.latitude,
       lon: latLong.longitude,
       fullJson: json,
