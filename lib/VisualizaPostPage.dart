@@ -1094,7 +1094,7 @@ class _FeedMediaItemState extends State<FeedMediaItem> {
                 context,
                 MaterialPageRoute(
                   builder: (context) {
-                    return DisplayPictureScreen(imagePath: fileInfo!.file.path);
+                    return DisplayPictureScreen(imagePath: fileInfo!.file.path, readOnly: true,);
                   },
                 ),
               );

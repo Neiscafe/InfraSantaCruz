@@ -19,6 +19,19 @@ class DisplayPictureScreen extends StatelessWidget {
       body: Stack(
         children: [
           SizedBox.expand(child: Container(color: Colors.black)),
+          InteractiveViewer(
+            panEnabled: true,
+            boundaryMargin: EdgeInsets.all(100),
+            minScale: 1,
+            maxScale: 3,
+            child: Align(
+              alignment: Alignment.center,
+              child: ClipRRect(
+                borderRadius: BorderRadiusGeometry.circular(12),
+                child: Image.file(File(file.path), fit: BoxFit.fitHeight),
+              ),
+            ),
+          ),
           Align(
             alignment: Alignment.topLeft,
             child: Padding(
@@ -31,13 +44,6 @@ class DisplayPictureScreen extends StatelessWidget {
                 onPressed: () => Navigator.pop(context),
                 icon: Icon(Icons.arrow_back),
               ),
-            ),
-          ),
-          Align(
-            alignment: Alignment.center,
-            child: ClipRRect(
-              borderRadius: BorderRadiusGeometry.circular(12),
-              child: Image.file(File(file.path), fit: BoxFit.fitHeight),
             ),
           ),
           if (!readOnly)

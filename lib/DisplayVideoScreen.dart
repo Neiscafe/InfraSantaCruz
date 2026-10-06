@@ -46,6 +46,36 @@ class _DisplayVideoScreenState extends State<DisplayVideoScreen> {
               children: [
                 SizedBox.expand(child: Container(color: Colors.black)),
                 Align(
+                  alignment: Alignment.center,
+                  child: ClipRRect(
+                    borderRadius: BorderRadiusGeometry.circular(12),
+                    child: AspectRatio(
+                      aspectRatio: _controller.value.aspectRatio,
+                      child: InteractiveViewer(
+                        minScale: 1,
+                        boundaryMargin: EdgeInsets.all(100),
+                        maxScale: 3,
+                        child: GestureDetector(
+                          child: VideoPlayer(_controller),
+                          onTap: () {
+                            if (!_controller.value.isPlaying) {
+                              _controller.play();
+                              setState(() {
+                                _videoRodando = true;
+                              });
+                            } else {
+                              _controller.pause();
+                              setState(() {
+                                _videoRodando = false;
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Align(
                   alignment: Alignment.topLeft,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 32),
@@ -56,31 +86,6 @@ class _DisplayVideoScreenState extends State<DisplayVideoScreen> {
                       ),
                       onPressed: () => Navigator.pop(context),
                       icon: Icon(Icons.arrow_back),
-                    ),
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.center,
-                  child: ClipRRect(
-                    borderRadius: BorderRadiusGeometry.circular(12),
-                    child: AspectRatio(
-                      aspectRatio: _controller.value.aspectRatio,
-                      child: GestureDetector(
-                        child: VideoPlayer(_controller),
-                        onTap: () {
-                          if (!_controller.value.isPlaying) {
-                            _controller.play();
-                            setState(() {
-                              _videoRodando = true;
-                            });
-                          } else {
-                            _controller.pause();
-                            setState(() {
-                              _videoRodando = false;
-                            });
-                          }
-                        },
-                      ),
                     ),
                   ),
                 ),
