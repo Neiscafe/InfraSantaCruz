@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:gal/gal.dart';
 import 'package:myapp/PostsRepository.dart';
 
 class DisplayPictureScreen extends StatelessWidget {
@@ -21,13 +22,13 @@ class DisplayPictureScreen extends StatelessWidget {
           SizedBox.expand(child: Container(color: Colors.black)),
           InteractiveViewer(
             panEnabled: true,
-            boundaryMargin: EdgeInsets.all(100),
+            boundaryMargin: const EdgeInsets.all(100),
             minScale: 1,
             maxScale: 3,
             child: Align(
               alignment: Alignment.center,
               child: ClipRRect(
-                borderRadius: BorderRadiusGeometry.circular(12),
+                borderRadius: BorderRadius.circular(12),
                 child: Image.file(File(file.path), fit: BoxFit.fitHeight),
               ),
             ),
@@ -42,7 +43,7 @@ class DisplayPictureScreen extends StatelessWidget {
                   iconSize: 30,
                 ),
                 onPressed: () => Navigator.pop(context),
-                icon: Icon(Icons.arrow_back),
+                icon: const Icon(Icons.arrow_back),
               ),
             ),
           ),
@@ -53,15 +54,33 @@ class DisplayPictureScreen extends StatelessWidget {
                 alignment: Alignment.bottomRight,
                 child: FilledButton(
                   onPressed: () async {
+                    try {
+                      final hasAccess = await Gal.hasAccess();
+                      if (!hasAccess) {
+                        await Gal.requestAccess();
+                      }
+                      await Gal.putImage(file.path);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Imagem salva na galeria!"),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      debugPrint("Erro ao salvar imagem na galeria: $e");
+                    }
                     PostsRepository.adicionaMidia(file);
+                    if (!context.mounted) return;
                     Navigator.pop(context);
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,
-                    padding: EdgeInsets.fromLTRB(20, 16, 20, 16),
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
                   ),
-                  child: Text("Enviar esta foto"),
+                  child: const Text("Enviar esta foto"),
                 ),
               ),
             ),

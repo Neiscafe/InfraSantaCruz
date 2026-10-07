@@ -11,10 +11,12 @@ import 'package:myapp/Consts.dart';
 import 'package:myapp/DisplayPictureScreen.dart';
 import 'package:myapp/DisplayVideoScreen.dart';
 import 'package:myapp/PhotoMenuPage.dart';
+import 'package:myapp/PostsCurtidosPage.dart';
 import 'package:myapp/PostsRepository.dart';
 import 'package:myapp/UserPage.dart';
 import 'package:myapp/VisualizaPostPage.dart';
 
+import 'NotificationRouter.dart';
 import 'Post.dart';
 
 class HomePage extends StatefulWidget {
@@ -36,32 +38,38 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    NotificationRouter.homeMontada();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       refreshPosts(this.context);
     });
     scrollController.addListener(() {
-      final scrollableSize = scrollController.position.maxScrollExtent;
-      final itemSize = scrollableSize / posts.length;
-      final remainingItemsThreshold = itemSize * 20;
-      if (scrollableSize - scrollController.position.pixels <=
-              remainingItemsThreshold &&
-          !loading &&
-          currentPage > 0 &&
-          !finalPage) {
-        listPostsSilently(this.context, currentPage);
+      if (!scrollController.hasClients ||
+          posts.isEmpty ||
+          loading ||
+          silentLoading ||
+          finalPage) {
+        return;
+      }
+      final maxScroll = scrollController.position.maxScrollExtent;
+      final currentScroll = scrollController.position.pixels;
+      if (maxScroll - currentScroll <= 200) {
+        listPostsSilently(this.context);
       }
     });
     _streamSubscription = PostsRepository.onPostUpdated.listen((Post post) {
+      final index = posts.indexWhere((p) => p.id == post.id);
+      if (index == -1 || !mounted) return;
       setState(() {
-        var _posts = List.of(posts);
-        _posts[posts.indexWhere((post2) => post2.id == post.id)] = post;
-        posts = _posts;
+        final novos = List.of(posts);
+        novos[index] = post;
+        posts = novos;
       });
     });
   }
 
   @override
   void dispose() {
+    NotificationRouter.homeRemovida();
     _streamSubscription?.cancel();
     super.dispose();
   }
@@ -78,21 +86,31 @@ class _HomePageState extends State<HomePage> {
         },
       ),
       appBar: AppBar(
-        leading: SizedBox.shrink(),
+        leading: Padding(
+          padding: const EdgeInsets.all(8),
+          child: UserIconWidget(
+            url: AuthRepository.usuarioAtual.urlAvatar ?? "",
+            onTap: (_) => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) =>
+                    UserPage(user: AuthRepository.usuarioAtual),
+              ),
+            ),
+          ),
+        ),
         title: Text('Feed de Posts'),
         centerTitle: true,
         actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: UserIconWidget(
-              url: AuthRepository.usuarioAtual.urlAvatar ?? "",
-              onTap: (_) => Navigator.of(context).push(
+          IconButton(
+            icon: Icon(Icons.favorite_border, color: Colors.grey[900]),
+            tooltip: 'Posts Curtidos',
+            onPressed: () {
+              Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) =>
-                      UserPage(user: AuthRepository.usuarioAtual),
+                  builder: (context) => const PostsCurtidosPage(),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ],
       ),
@@ -109,27 +127,45 @@ class _HomePageState extends State<HomePage> {
                     backgroundColor: Colors.blue,
                     onRefresh: () => refreshPosts(context),
                     elevation: 4,
-                    child: ListView.builder(
-                      physics: AlwaysScrollableScrollPhysics(),
-                      controller: scrollController,
-                      padding: EdgeInsets.all(12),
-                      itemCount: posts.length,
-                      itemBuilder: (context, index) {
-                        final post = posts[index];
-                        return PostCardWidget(
-                          post,
-                          navega: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) {
-                                  return VisualizaPostPage(post: post);
-                                },
+                    child: posts.isEmpty
+                        ? CustomScrollView(
+                            slivers: [
+                              SliverFillRemaining(
+                                child: Center(
+                                  child: Text("Nenhuma publicação ainda."),
+                                ),
                               ),
-                            );
-                          },
-                        );
-                      },
-                    ),
+                            ],
+                          )
+                        : ListView.builder(
+                            physics: AlwaysScrollableScrollPhysics(),
+                            controller: scrollController,
+                            padding: EdgeInsets.all(12),
+                            itemCount: posts.length + (silentLoading ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (index == posts.length) {
+                                return const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 16),
+                                  child: Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                );
+                              }
+                              final post = posts[index];
+                              return PostCardWidget(
+                                post,
+                                navega: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) {
+                                        return VisualizaPostPage(post: post);
+                                      },
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
                   ),
                 ),
               ],
@@ -144,32 +180,44 @@ class _HomePageState extends State<HomePage> {
     if (!context.mounted) return;
     setState(() {
       loading = true;
+      silentLoading = false;
+      finalPage = false;
     });
-    List<Post>? posts;
+    List<Post>? novosPosts;
     String? erro;
     try {
-      posts = await PostsRepository.buscaPosts(null, null);
+      novosPosts = await PostsRepository.buscaPosts(null, null);
     } catch (e) {
       erro = Consts.ERROR;
     }
     if (!context.mounted) return;
-    erro != null
-        ? ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(Consts.ERROR)))
-        : null;
+    if (erro != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(Consts.ERROR)));
+    }
     setState(() {
-      finalPage = false;
       loading = false;
       currentPage = 1;
-      this.posts = posts ?? this.posts;
+      if (novosPosts != null) {
+        posts = novosPosts;
+        if (novosPosts.isEmpty || novosPosts.length < 20) {
+          finalPage = true;
+        }
+      }
     });
   }
 
-  Future<void> listPostsSilently(BuildContext context, int currentPage) async {
-    if (!context.mounted) return;
+  Future<void> listPostsSilently(BuildContext context) async {
+    if (!context.mounted ||
+        loading ||
+        silentLoading ||
+        finalPage ||
+        posts.isEmpty) {
+      return;
+    }
     setState(() {
-      loading = true;
+      silentLoading = true;
     });
     List<Post>? novosPosts;
     String? error;
@@ -185,15 +233,17 @@ class _HomePageState extends State<HomePage> {
       ).showSnackBar(SnackBar(content: Text(error)));
     }
     setState(() {
-      loading = false;
-      if (error == null && novosPosts!.isEmpty || novosPosts!.length < 50) {
+      silentLoading = false;
+      if (error == null && novosPosts != null && novosPosts.isNotEmpty) {
+        final postsCopy = posts.toList()..addAll(novosPosts);
+        posts = postsCopy;
+        currentPage++;
+        if (novosPosts.length < 20) {
+          finalPage = true;
+        }
+      } else if (novosPosts == null || novosPosts.isEmpty) {
         finalPage = true;
-        return;
       }
-      final postsCopy = posts.toList();
-      postsCopy.addAll(novosPosts ?? posts);
-      currentPage = error == null ? currentPage + 1 : currentPage;
-      posts = postsCopy;
     });
   }
 }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:mime/mime.dart';
 import 'package:myapp/DisplayPictureScreen.dart';
 import 'package:myapp/DisplayVideoScreen.dart';
+import 'package:native_device_orientation/native_device_orientation.dart';
 
 class TirarFotoPage extends StatefulWidget {
   const TirarFotoPage({super.key});
@@ -17,127 +19,253 @@ class TirarFotoPage extends StatefulWidget {
 class _TirarFotoPageState extends State<TirarFotoPage>
     with WidgetsBindingObserver {
   late List<CameraDescription> cameras;
+  late StreamSubscription<NativeDeviceOrientation> _orientationSubscription;
   CameraController? cameraController;
   int _selectedCameraIndex = 0;
   bool _cameraStarted = false;
-  final ValueNotifier<bool> _flashOn = ValueNotifier(false);
-  ValueNotifier<double> _currentScale = ValueNotifier(1.0);
+  bool _flashOn = false;
+  double _currentScale = 1.0;
   double _baseScale = 1.0;
   double _minAvailableZoom = 1.0;
   double _maxAvailableZoom = 1.0;
-
-  // Counting pointers (number of user fingers on screen)
   int _pointers = 0;
   XFile? _pendingFile;
+  DeviceOrientation? _orientation;
   String erro = "";
   Timer? timer;
-  final ValueNotifier<bool> _gravando = ValueNotifier(false);
-  final ValueNotifier<int?> videoDurationNotifier = ValueNotifier(null);
+  bool _gravando = false;
+  bool _stoppingRecording = false;
+  int? _videoDurationValue;
 
   void startVideoTimer() {
     timer?.cancel();
-    videoDurationNotifier.value = 0;
-    timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      videoDurationNotifier.value = (videoDurationNotifier.value ?? 0) + 1;
-      if (videoDurationNotifier.value! > 60) {
-        _stopRecording(this.context);
+    setState(() {
+      _videoDurationValue = 0;
+    });
+    timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _videoDurationValue = (_videoDurationValue ?? 0) + 1;
+        });
+        if (_videoDurationValue! >= 60) {
+          _stopRecording(context);
+        }
       }
     });
   }
 
   void stopVideoTimer() {
     timer?.cancel();
-    videoDurationNotifier.value = null;
+    if (mounted) {
+      setState(() {
+        _videoDurationValue = null;
+      });
+    }
   }
 
   void _switchFlash() {
-    _flashOn.value = !_flashOn.value;
-    cameraController?.setFlashMode(
-      _flashOn.value ? FlashMode.always : FlashMode.off,
+    setState(() {
+      _flashOn = !_flashOn;
+    });
+    cameraController?.setFlashMode(_flashOn ? FlashMode.always : FlashMode.off);
+  }
+
+  Widget _cameraPreviewWidget() {
+    if (cameraController == null || !cameraController!.value.isInitialized) {
+      return const SizedBox.shrink();
+    }
+    final int quarterTurns;
+    switch (_orientation) {
+      case DeviceOrientation.landscapeRight:
+        quarterTurns = 3;
+        break;
+      case DeviceOrientation.portraitDown:
+        quarterTurns = 2;
+        break;
+      case DeviceOrientation.landscapeLeft:
+        quarterTurns = 1;
+        break;
+      default:
+        quarterTurns = 0;
+        break;
+    }
+
+    return RotatedBox(
+      quarterTurns: quarterTurns,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: CameraPreview(
+          cameraController!,
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onScaleStart: _handleScaleStart,
+                onScaleUpdate: _handleScaleUpdate,
+                onTapDown: (TapDownDetails details) {
+                  onViewFinderTap(details, constraints);
+                },
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
 
   Widget cameraElement(BuildContext context) {
-    if (_cameraStarted) {
-      return Stack(
-        children: [
-          SizedBox.expand(child: Container(color: Colors.black)),
-          Align(
-            alignment: Alignment.topLeft,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              child: _closeButton(context),
-            ),
-          ),
-          Align(
-            alignment: Alignment.topRight,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              child: ValueListenableBuilder(
-                valueListenable: _flashOn,
-                builder: (context, flashOn, child) {
-                  return _flashButton(flashOn);
-                },
-              ),
-            ),
-          ),
-          Align(
-            alignment: Alignment.center,
-            child: Listener(
-              onPointerDown: (_) => _pointers++,
-              onPointerUp: (_) => _pointers--,
-              child: _camera(),
-            ),
-          ),
-          Align(
-            alignment: Alignment.topCenter,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 80),
-              child: ValueListenableBuilder(
-                valueListenable: _currentScale,
-                builder: (context, zoom, child) {
-                  return _zoomMultiplier(zoom);
-                },
-              ),
-            ),
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(0, 0, 0, 60),
-              child: Column(
-                spacing: 8,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  ValueListenableBuilder(
-                    valueListenable: videoDurationNotifier,
-                    builder: (context, value, child) {
-                      if (value == null) {
-                        return SizedBox.shrink();
-                      }
-                      return _videoDuration(value);
-                    },
-                  ),
-                  ValueListenableBuilder(
-                    valueListenable: _gravando,
-                    builder: (context, value, child) {
-                      return _cameraControls(value, context);
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      );
-    } else {
-      // startCamera();
+    if (!_cameraStarted || cameraController == null) {
       return Center(child: Text(erro));
     }
+    return Stack(
+      children: [
+        SizedBox.expand(child: Container(color: Colors.black)),
+        Center(
+          child: Listener(
+            onPointerDown: (_) => _pointers++,
+            onPointerUp: (_) => _pointers--,
+            child: _cameraPreviewWidget(),
+          ),
+        ),
+        OrientationBuilder(
+          builder: (context, orientation) {
+            final isLandscape = orientation == Orientation.landscape;
+            return Stack(
+              children: [
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: _closeButton(context),
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.topRight,
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: _flashButton(_flashOn),
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: SafeArea(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: isLandscape ? 16 : 80),
+                      child: _zoomMultiplier(_currentScale),
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: isLandscape
+                      ? Alignment.centerRight
+                      : Alignment.bottomCenter,
+                  child: SafeArea(
+                    child: Padding(
+                      padding: EdgeInsets.all(isLandscape ? 16 : 24),
+                      child: isLandscape
+                          ? Column(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _videoDurationValue == null
+                                    ? const SizedBox.shrink()
+                                    : Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 12,
+                                        ),
+                                        child: _videoDuration(
+                                          _videoDurationValue!,
+                                        ),
+                                      ),
+                                _cameraControlsLandscape(context),
+                              ],
+                            )
+                          : Column(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                _videoDurationValue == null
+                                    ? const SizedBox.shrink()
+                                    : Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 12,
+                                        ),
+                                        child: _videoDuration(
+                                          _videoDurationValue!,
+                                        ),
+                                      ),
+                                _cameraControls(context),
+                              ],
+                            ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _cameraControlsLandscape(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FilledButton(
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.square(44),
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black,
+          ),
+          onPressed: _changeOrientation,
+          child: const Icon(Icons.cameraswitch_outlined),
+        ),
+        const SizedBox(height: 12),
+        if (!_gravando) ...[
+          FilledButton(
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.square(64),
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+            ),
+            onPressed: () => takePhoto(context),
+            child: const Icon(Icons.photo_camera, size: 28),
+          ),
+          const SizedBox(height: 12),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.square(44),
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+            ),
+            onPressed: startRecording,
+            child: const Icon(
+              Icons.fiber_manual_record_rounded,
+              color: Colors.red,
+            ),
+          ),
+        ] else ...[
+          FilledButton(
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.square(64),
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+            ),
+            onPressed: () => _stopRecording(context),
+            child: const Icon(Icons.stop, size: 28),
+          ),
+        ],
+      ],
+    );
   }
 
   Widget _zoomMultiplier(double zoom) {
-    if (zoom == 1) return SizedBox.shrink();
+    if (zoom == 1) return const SizedBox.shrink();
     return UnconstrainedBox(
       child: Container(
         decoration: BoxDecoration(
@@ -149,29 +277,8 @@ class _TirarFotoPageState extends State<TirarFotoPage>
           padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 14),
           child: Text(
             "${zoom.toStringAsFixed(1)}x",
-            style: TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.white),
           ),
-        ),
-      ),
-    );
-  }
-
-  ClipRRect _camera() {
-    return ClipRRect(
-      borderRadius: BorderRadiusGeometry.circular(16),
-      child: CameraPreview(
-        cameraController!,
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            return GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onScaleStart: _handleScaleStart,
-              onScaleUpdate: _handleScaleUpdate,
-              onTapDown: (TapDownDetails details) {
-                onViewFinderTap(details, constraints);
-              },
-            );
-          },
         ),
       ),
     );
@@ -189,7 +296,7 @@ class _TirarFotoPageState extends State<TirarFotoPage>
     return IconButton(
       style: IconButton.styleFrom(foregroundColor: Colors.white, iconSize: 30),
       onPressed: () => Navigator.pop(context),
-      icon: Icon(Icons.close),
+      icon: const Icon(Icons.close),
     );
   }
 
@@ -205,14 +312,14 @@ class _TirarFotoPageState extends State<TirarFotoPage>
           padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 14),
           child: Text(
             "${(value / 60).toInt().toString().padLeft(2, '0')}:${(value % 60).toInt().toString().padLeft(2, '0')}",
-            style: TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.white),
           ),
         ),
       ),
     );
   }
 
-  Row _cameraControls(bool value, BuildContext context) {
+  Row _cameraControls(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.max,
       children: [
@@ -223,12 +330,12 @@ class _TirarFotoPageState extends State<TirarFotoPage>
             children: [
               FilledButton(
                 style: FilledButton.styleFrom(
-                  minimumSize: Size.square(40),
+                  minimumSize: const Size.square(40),
                   backgroundColor: Colors.white,
                   foregroundColor: Colors.black,
                 ),
-                onPressed: _changeOrientation,
-                child: Icon(Icons.cameraswitch_outlined),
+                onPressed: _stoppingRecording ? null : _changeOrientation,
+                child: const Icon(Icons.cameraswitch_outlined),
               ),
             ],
           ),
@@ -236,25 +343,36 @@ class _TirarFotoPageState extends State<TirarFotoPage>
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (!value) ...[
+            if (!_gravando) ...[
               FilledButton(
                 style: FilledButton.styleFrom(
-                  minimumSize: Size.square(80),
+                  minimumSize: const Size.square(80),
                   backgroundColor: Colors.white,
                   foregroundColor: Colors.black,
                 ),
                 onPressed: () => takePhoto(context),
-                child: Icon(Icons.photo_camera),
+                child: const Icon(Icons.photo_camera),
               ),
             ] else ...[
               FilledButton(
                 style: FilledButton.styleFrom(
-                  minimumSize: Size.square(80),
+                  minimumSize: const Size.square(80),
                   backgroundColor: Colors.white,
                   foregroundColor: Colors.black,
                 ),
-                onPressed: () => _stopRecording(context),
-                child: Icon(Icons.stop),
+                onPressed: _stoppingRecording
+                    ? null
+                    : () => _stopRecording(context),
+                child: _stoppingRecording
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.black,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.stop),
               ),
             ],
           ],
@@ -264,18 +382,21 @@ class _TirarFotoPageState extends State<TirarFotoPage>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (!value) ...[
+              if (!_gravando) ...[
                 FilledButton(
                   style: FilledButton.styleFrom(
-                    minimumSize: Size.square(40),
+                    minimumSize: const Size.square(40),
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,
                   ),
-                  onPressed: () => startRecording(),
-                  child: Icon(Icons.fiber_manual_record_rounded),
+                  onPressed: startRecording,
+                  child: const Icon(
+                    Icons.fiber_manual_record_rounded,
+                    color: Colors.red,
+                  ),
                 ),
               ] else ...[
-                Spacer(),
+                const Spacer(),
               ],
             ],
           ),
@@ -294,16 +415,19 @@ class _TirarFotoPageState extends State<TirarFotoPage>
 
   void startCamera() async {
     cameras = await availableCameras();
+    if (cameras.isEmpty) {
+      if (mounted) setState(() => erro = "Nenhuma câmera encontrada");
+      return;
+    }
     cameraController = CameraController(
       cameras[_selectedCameraIndex],
-      ResolutionPreset.medium,
-      enableAudio: false,
+      ResolutionPreset.high,
+      enableAudio: true,
+      imageFormatGroup: ImageFormatGroup.jpeg,
     );
     try {
       await cameraController?.initialize();
-      await cameraController?.lockCaptureOrientation(
-        DeviceOrientation.portraitUp,
-      );
+      await cameraController?.unlockCaptureOrientation();
       await cameraController?.prepareForVideoRecording();
       _minAvailableZoom = await cameraController!.getMinZoomLevel();
       _maxAvailableZoom = await cameraController!.getMaxZoomLevel();
@@ -312,6 +436,7 @@ class _TirarFotoPageState extends State<TirarFotoPage>
         _cameraStarted = true;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         erro = e.toString();
       });
@@ -328,8 +453,8 @@ class _TirarFotoPageState extends State<TirarFotoPage>
   void callback(XFile file) {
     final mime = lookupMimeType(file.path);
     if (mime?.contains('image') == true) {
-      Navigator.push(
-        this.context,
+      Navigator.pushReplacement(
+        context,
         MaterialPageRoute(
           builder: (context) {
             return DisplayPictureScreen(imagePath: file.path);
@@ -337,15 +462,15 @@ class _TirarFotoPageState extends State<TirarFotoPage>
         ),
       );
     } else if (mime?.contains('video') == true) {
-      Navigator.push(
-        this.context,
+      Navigator.pushReplacement(
+        context,
         MaterialPageRoute(
           builder: (context) {
             return DisplayVideoScreen(imagePath: file.path);
           },
         ),
       );
-    } else {}
+    }
   }
 
   void takePhoto(BuildContext context) async {
@@ -363,66 +488,83 @@ class _TirarFotoPageState extends State<TirarFotoPage>
 
   void startRecording() {
     cameraController?.startVideoRecording();
-    _gravando.value = true;
+    setState(() {
+      _gravando = true;
+    });
     startVideoTimer();
   }
 
   void _stopRecording(BuildContext context) async {
-    if (!context.mounted) {
+    if (_stoppingRecording || !context.mounted) {
       return;
     }
-    _gravando.value = false;
-    final file = await cameraController?.stopVideoRecording();
-    stopVideoTimer();
-    _pendingFile = file;
-    if (!context.mounted) {
-      return;
+    setState(() {
+      _stoppingRecording = true;
+    });
+
+    try {
+      final file = await cameraController?.stopVideoRecording();
+      stopVideoTimer();
+      if (mounted) {
+        setState(() {
+          _gravando = false;
+        });
+      }
+
+      if (file == null) return;
+      _pendingFile = file;
+      if (!context.mounted) return;
+      _pendingFile = null;
+      callback(file);
+    } catch (e) {
+      debugPrint("Erro ao parar gravação: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _stoppingRecording = false;
+        });
+      }
     }
-    _pendingFile = null;
-    callback(file!);
   }
 
   void _handleScaleStart(ScaleStartDetails details) {
-    _baseScale = _currentScale.value;
+    _baseScale = _currentScale;
   }
 
   void onViewFinderTap(TapDownDetails details, BoxConstraints constraints) {
-    if (this.cameraController == null) {
+    if (cameraController == null) {
       return;
     }
-
-    final CameraController cameraController = this.cameraController!;
 
     final Offset offset = Offset(
       details.localPosition.dx / constraints.maxWidth,
       details.localPosition.dy / constraints.maxHeight,
     );
-    cameraController.setExposurePoint(offset);
-    cameraController.setFocusPoint(offset);
+    cameraController!.setExposurePoint(offset);
+    cameraController!.setFocusPoint(offset);
   }
 
   Future<void> _handleScaleUpdate(ScaleUpdateDetails details) async {
-    // When there are not exactly two fingers on screen don't scale
     if (cameraController == null || _pointers != 2) {
       return;
     }
-    _currentScale.value = (_baseScale * details.scale).clamp(
+    final newScale = (_baseScale * details.scale).clamp(
       _minAvailableZoom,
       _maxAvailableZoom,
     );
-    debugPrint(
-      "scale: ${details.scale} - currentScale: ${_currentScale.value}",
-    );
+    setState(() {
+      _currentScale = newScale;
+    });
 
-    await cameraController!.setZoomLevel(_currentScale.value);
+    await cameraController!.setZoomLevel(_currentScale);
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused) {
-      if (_gravando.value) {
-        _stopRecording(this.context);
+      if (_gravando) {
+        _stopRecording(context);
       }
     } else if (state == AppLifecycleState.resumed) {
       sendPendingFileIfExists();
@@ -433,7 +575,34 @@ class _TirarFotoPageState extends State<TirarFotoPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     startCamera();
+    _orientationSubscription = NativeDeviceOrientationCommunicator()
+        .onOrientationChanged(useSensor: true)
+        .listen((NativeDeviceOrientation orientation) {
+          if (!mounted || cameraController?.value.isInitialized != true) return;
+          final deviceOrientation = _convertToDeviceOrientation(orientation);
+          setState(() {
+            _orientation = deviceOrientation;
+          });
+          cameraController?.lockCaptureOrientation(deviceOrientation);
+        });
+  }
+
+  DeviceOrientation _convertToDeviceOrientation(
+    NativeDeviceOrientation orientation,
+  ) {
+    switch (orientation) {
+      case NativeDeviceOrientation.landscapeLeft:
+        return DeviceOrientation.landscapeLeft;
+      case NativeDeviceOrientation.landscapeRight:
+        return DeviceOrientation.landscapeRight;
+      case NativeDeviceOrientation.portraitDown:
+        return DeviceOrientation.portraitDown;
+      case NativeDeviceOrientation.portraitUp:
+      default:
+        return DeviceOrientation.portraitUp;
+    }
   }
 
   @override
@@ -441,6 +610,13 @@ class _TirarFotoPageState extends State<TirarFotoPage>
     WidgetsBinding.instance.removeObserver(this);
     timer?.cancel();
     cameraController?.dispose();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    _orientationSubscription.cancel();
     super.dispose();
   }
 

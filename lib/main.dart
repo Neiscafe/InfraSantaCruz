@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -5,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'package:myapp/AuthRepository.dart';
 import 'package:myapp/MyApp.dart';
+import 'package:myapp/NotificationRouter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'firebase_options.dart';
@@ -19,24 +22,22 @@ const AndroidNotificationChannel channel = AndroidNotificationChannel(
 );
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-FlutterLocalNotificationsPlugin();
+    FlutterLocalNotificationsPlugin();
 
 Future<void> showNotificationWithAvatar(RemoteMessage message) async {
   final title =
       message.notification?.title ??
-          message.data['title'] ??
-          'Nova notificação';
+      message.data['title'] ??
+      'Nova notificação';
   final body = message.notification?.body ?? message.data['body'] ?? '';
   final avatarUrl =
       message.data['avatar_url'] ??
-          message.data['user_avatar_url'] ??
-          message.data['avatar'] ??
-          message.data['user_avatar'];
+      message.data['user_avatar_url'] ??
+      message.data['avatar'] ??
+      message.data['user_avatar'];
 
   ByteArrayAndroidBitmap? largeIcon;
-  if (avatarUrl != null && avatarUrl
-      .toString()
-      .isNotEmpty) {
+  if (avatarUrl != null && avatarUrl.toString().isNotEmpty) {
     try {
       final response = await http.get(Uri.parse(avatarUrl.toString()));
       if (response.statusCode == 200) {
@@ -61,17 +62,14 @@ Future<void> showNotificationWithAvatar(RemoteMessage message) async {
 
   final notificationId = message.messageId != null
       ? message.messageId.hashCode
-      : DateTime
-      .now()
-      .millisecondsSinceEpoch
-      .remainder(100000);
+      : DateTime.now().millisecondsSinceEpoch.remainder(100000);
 
   await flutterLocalNotificationsPlugin.show(
     id: notificationId,
     title: title,
     body: body,
     notificationDetails: notificationDetails,
-    payload: message.data['payload'] ?? message.data['route'],
+    payload: jsonEncode(message.data),
   );
 }
 
@@ -96,7 +94,11 @@ Future<void> main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
-      alert: true, badge: true, sound: true);
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+  FirebaseMessaging.onMessageOpenedApp.listen((m) {});
   const initializationSettingsAndroid = AndroidInitializationSettings(
     '@drawable/ic_notification',
   );
@@ -107,13 +109,31 @@ Future<void> main() async {
 
   await flutterLocalNotificationsPlugin.initialize(
     settings: initializationSettings,
+    onDidReceiveNotificationResponse: (response) =>
+        NotificationRouter.aoTocarNotificacaoLocal(response.payload),
   );
 
   await flutterLocalNotificationsPlugin
       .resolvePlatformSpecificImplementation<
-      AndroidFlutterLocalNotificationsPlugin
-  >()
+        AndroidFlutterLocalNotificationsPlugin
+      >()
       ?.createNotificationChannel(channel);
+  FirebaseMessaging.onMessageOpenedApp.listen(
+    (m) => NotificationRouter.aoTocarNotificacaoFcm(m.data),
+  );
+
+  // App encerrado: aberto por notificação do sistema
+  final inicial = await FirebaseMessaging.instance.getInitialMessage();
+  if (inicial != null) NotificationRouter.aoTocarNotificacaoFcm(inicial.data);
+
+  // App encerrado: aberto por notificação local
+  final launch = await flutterLocalNotificationsPlugin
+      .getNotificationAppLaunchDetails();
+  if (launch?.didNotificationLaunchApp ?? false) {
+    NotificationRouter.aoTocarNotificacaoLocal(
+      launch!.notificationResponse?.payload,
+    );
+  }
 
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     showNotificationWithAvatar(message);
@@ -121,6 +141,5 @@ Future<void> main() async {
 
   AuthRepository.startSessionListener();
   AuthRepository.initFirebaseMessaging();
-
   runApp(const MyApp());
 }

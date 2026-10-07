@@ -37,11 +37,16 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
   void initState() {
     super.initState();
     _videoController = VideoPlayerController.file(File(widget.file.path));
-    _videoController?.initialize().then((_) {
-      if (mounted) {
-        setState(() {});
-      }
-    });
+    _videoController
+        ?.initialize()
+        .then((_) {
+          if (mounted) {
+            setState(() {});
+          }
+        })
+        .catchError((e) {
+          debugPrint("Erro ao inicializar thumbnail do vídeo: $e");
+        });
   }
 
   @override

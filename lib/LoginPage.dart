@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:myapp/Consts.dart';
 import 'package:myapp/HomePage.dart';
+import 'package:myapp/PermissaoPage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'AuthRepository.dart';
@@ -31,7 +32,7 @@ class _LoginPageState extends State<LoginPage> {
           Navigator.of(context).pop();
         } else {
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const HomePage()),
+            MaterialPageRoute(builder: (context) => const PermissaoPage()),
           );
         }
       }
@@ -47,8 +48,8 @@ class _LoginPageState extends State<LoginPage> {
   void _handleOAuthLogin(OAuthProvider provider) {
     try {
       AuthRepository.signInWithOAuth(provider);
-    } on Exception catch(e){
-      if(!context.mounted) return;
+    } on Exception catch (e) {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(Consts.ERROR),

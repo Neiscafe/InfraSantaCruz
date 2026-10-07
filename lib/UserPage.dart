@@ -35,15 +35,17 @@ class _UserPageState extends State<UserPage> {
       refreshPosts(this.context);
     });
     scrollController.addListener(() {
-      final scrollableSize = scrollController.position.maxScrollExtent;
-      final itemSize = scrollableSize / posts.length;
-      final remainingItemsThreshold = itemSize * 20;
-      if (scrollableSize - scrollController.position.pixels <=
-              remainingItemsThreshold &&
-          !loading &&
-          currentPage > 0 &&
-          !finalPage) {
-        listPostsSilently(this.context, currentPage);
+      if (!scrollController.hasClients ||
+          posts.isEmpty ||
+          loading ||
+          silentLoading ||
+          finalPage) {
+        return;
+      }
+      final maxScroll = scrollController.position.maxScrollExtent;
+      final currentScroll = scrollController.position.pixels;
+      if (maxScroll - currentScroll <= 200) {
+        listPostsSilently(this.context);
       }
     });
     _streamSubscription = PostsRepository.onPostUpdated.listen((
@@ -72,32 +74,47 @@ class _UserPageState extends State<UserPage> {
     if (!context.mounted) return;
     setState(() {
       loading = true;
+      silentLoading = false;
+      finalPage = false;
     });
-    List<Post>? posts;
+    List<Post>? novosPosts;
     String? erro;
     try {
-      posts = await PostsRepository.buscaPosts(null, widget.user.usuarioId);
+      novosPosts = await PostsRepository.buscaPosts(
+        null,
+        widget.user.usuarioId,
+      );
     } catch (e) {
       erro = Consts.ERROR;
     }
     if (!context.mounted) return;
-    erro != null
-        ? ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(Consts.ERROR)))
-        : null;
+    if (erro != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(Consts.ERROR)));
+    }
     setState(() {
-      finalPage = false;
       loading = false;
       currentPage = 1;
-      this.posts = posts ?? this.posts;
+      if (novosPosts != null) {
+        posts = novosPosts;
+        if (novosPosts.isEmpty || novosPosts.length < 20) {
+          finalPage = true;
+        }
+      }
     });
   }
 
-  Future<void> listPostsSilently(BuildContext context, int currentPage) async {
-    if (!context.mounted) return;
+  Future<void> listPostsSilently(BuildContext context) async {
+    if (!context.mounted ||
+        loading ||
+        silentLoading ||
+        finalPage ||
+        posts.isEmpty) {
+      return;
+    }
     setState(() {
-      loading = true;
+      silentLoading = true;
     });
     List<Post>? novosPosts;
     String? error;
@@ -116,15 +133,17 @@ class _UserPageState extends State<UserPage> {
       ).showSnackBar(SnackBar(content: Text(error)));
     }
     setState(() {
-      loading = false;
-      if (error == null && novosPosts!.isEmpty || novosPosts!.length < 20) {
+      silentLoading = false;
+      if (error == null && novosPosts != null && novosPosts.isNotEmpty) {
+        final postsCopy = posts.toList()..addAll(novosPosts);
+        posts = postsCopy;
+        currentPage++;
+        if (novosPosts.length < 20) {
+          finalPage = true;
+        }
+      } else if (novosPosts == null || novosPosts.isEmpty) {
         finalPage = true;
-        return;
       }
-      final postsCopy = posts.toList();
-      postsCopy.addAll(novosPosts ?? posts);
-      currentPage = error == null ? currentPage + 1 : currentPage;
-      posts = postsCopy;
     });
   }
 
@@ -180,7 +199,7 @@ class _UserPageState extends State<UserPage> {
           child: Stack(
             children: [
               UserIconWidget(
-                url: widget.user.urlAvatar ?? "",
+                url: widget.user.urlAvatar?.replaceAll("s96-c", "s400-c") ?? "",
                 size: Size(200, 200),
                 borderRadius: 100,
                 onTap: (_) {},

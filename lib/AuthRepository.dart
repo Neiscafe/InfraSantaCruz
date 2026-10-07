@@ -116,11 +116,11 @@ class AuthRepository {
 
       final googleUser =
           await googleSignIn.attemptLightweightAuthentication() ??
-              await googleSignIn.authenticate();
+          await googleSignIn.authenticate();
 
       final authorization =
           await googleUser.authorizationClient.authorizationForScopes(scopes) ??
-              await googleUser.authorizationClient.authorizeScopes(scopes);
+          await googleUser.authorizationClient.authorizeScopes(scopes);
 
       final idToken = googleUser.authentication.idToken;
 
@@ -135,7 +135,7 @@ class AuthRepository {
       );
 
       await sendFirebaseToken();
-    } on Exception catch(e, trace){
+    } on Exception catch (e, trace) {
       debugPrint(trace.toString());
       debugPrint(e.toString());
       throw e;

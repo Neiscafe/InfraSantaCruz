@@ -56,14 +56,26 @@ class PostsRepository {
 
   static String get userId => AuthRepository.session!.user.id;
 
-  static List<XFile> midiasPost = [];
+  static StreamController<List<XFile>> _midiasPostController =
+      StreamController<List<XFile>>.broadcast();
+
+  static Stream<List<XFile>> get midiasPostStream =>
+      _midiasPostController.stream;
 
   static void adicionaMidia(XFile midia) async {
-    midiasPost.add(midia);
+    var lista = (await midiasPostStream.last).toList();
+    lista.add(midia);
+    _midiasPostController.add(lista);
   }
 
   static void removeImagem(XFile imagem) async {
-    midiasPost.remove(imagem);
+    var lista = (await midiasPostStream.last).toList();
+    lista.remove(imagem);
+    _midiasPostController.add(lista);
+  }
+
+  static void limpaImagens() async {
+    _midiasPostController.add(List.empty());
   }
 
   static Future<List<Post>> buscaPosts(
@@ -94,7 +106,50 @@ class PostsRepository {
     }
   }
 
+  static Future<List<Post>> buscaPostsCurtidos(
+    String? dataPostMaisAntigo,
+  ) async {
+    try {
+      var query = client
+          .from('posts')
+          .select(
+            '''*, total_curtidas, curtido_por_mim, total_comentarios, usuario:users(*)''',
+          )
+          .eq('curtido_por_mim', true);
+      if (dataPostMaisAntigo != null) {
+        query = query.lt("created_at", dataPostMaisAntigo);
+      }
+      final response = await query
+          .order("created_at", ascending: false)
+          .order("post_id", ascending: false)
+          .limit(20);
+      return response.map((item) => Post.fromJson(item)).toList();
+    } catch (e, trace) {
+      debugPrint(trace.toString());
+      debugPrint(e.toString());
+      throw Exception("Falha ao buscar posts curtidos: $e");
+    }
+  }
+
+  static Future<Post?> buscaPost(String postId) async {
+    try {
+      final response = await client
+          .from('posts')
+          .select(
+            '''*, total_curtidas, curtido_por_mim, total_comentarios, usuario:users(*)''',
+          )
+          .eq('post_id', postId)
+          .maybeSingle();
+      return response == null ? null : Post.fromJson(response);
+    } catch (e, trace) {
+      debugPrint(trace.toString());
+      debugPrint(e.toString());
+      throw Exception("Falha ao buscar post: $e");
+    }
+  }
+
   static Future<void> criaPost(Post post) async {
+    final midiasPost = await midiasPostStream.last;
     List<Map<String, dynamic>> filesData = List.empty(growable: true);
     for (int i = 0; i < midiasPost.length; i++) {
       final arquivo = midiasPost[i];
@@ -125,7 +180,7 @@ class PostsRepository {
     } catch (e, trace) {
       debugPrint(trace.toString());
       debugPrint(e.toString());
-      midiasPost.clear();
+      _midiasPostController.add(List.empty());
       throw Exception("Falha ao criar registro de post: $e");
     }
     try {
@@ -152,10 +207,6 @@ class PostsRepository {
     } finally {
       midiasPost.clear();
     }
-  }
-
-  static void deletaMidia(XFile file) {
-    midiasPost.remove(file);
   }
 
   static Future<void> curtePost(Post post) async {
@@ -207,8 +258,10 @@ class PostsRepository {
         "https://yombhmzdpmffekqhdtrv.supabase.co/storage/v1/object/public/posts/";
     final remotePath = midia.publicUrl.replaceAll(baseUrl, "");
     final splitPath = remotePath.split("/");
-    final postId = splitPath[splitPath.length - 2];
-    final fileName = splitPath.last;
+    final postId = splitPath.length >= 2
+        ? splitPath[splitPath.length - 2]
+        : "cache";
+    final fileName = splitPath.isNotEmpty ? splitPath.last : "video";
     final appDirPath = (await getApplicationCacheDirectory()).path;
     final thumb = File("$appDirPath/$postId/$fileName.thumb.jpg");
 
@@ -228,7 +281,7 @@ class PostsRepository {
     if (bytes == null || bytes.isEmpty) {
       throw Exception("Falha ao gerar miniatura");
     }
-    await thumb.create(recursive: true);
+    await thumb.parent.create(recursive: true);
     await thumb.writeAsBytes(bytes);
     return thumb;
   }
@@ -247,28 +300,45 @@ class PostsRepository {
   }
 
   static Future<File> _downloadVideo(PostMidia midia) async {
+    final baseUrl =
+        "https://yombhmzdpmffekqhdtrv.supabase.co/storage/v1/object/public/posts/";
+    final remotePath = midia.publicUrl.replaceAll(baseUrl, "");
+    final appDirPath = (await getApplicationCacheDirectory()).path;
+    final splitPath = remotePath.split("/");
+    final postId = splitPath.length >= 2
+        ? splitPath[splitPath.length - 2]
+        : "cache";
+    final fileName = splitPath.isNotEmpty ? splitPath.last : "video";
+    final cachePath = "$appDirPath/$postId/$fileName.mp4";
+    final file = File(cachePath);
+
     try {
-      final baseUrl =
-          "https://yombhmzdpmffekqhdtrv.supabase.co/storage/v1/object/public/posts/";
-      final remotePath = midia.publicUrl.replaceAll(baseUrl, "");
-      final appDirPath = (await getApplicationCacheDirectory()).path;
-      final splitPath = remotePath.split("/");
-      final postId = splitPath[splitPath.length - 2];
-      final fileName = splitPath.last;
-      final cachePath = "$appDirPath/$postId/$fileName.mp4";
-      final file = File(cachePath);
       if (await file.exists()) {
-        final lastModified = await file.lastModified();
-        final modificationDiff = DateTime.now().difference(lastModified);
-        final newerThan7Days = modificationDiff < Duration(days: 7);
-        if (newerThan7Days) return file;
-      } else {
-        await file.create(recursive: true);
+        final length = await file.length();
+        if (length > 0) {
+          final lastModified = await file.lastModified();
+          final modificationDiff = DateTime.now().difference(lastModified);
+          final newerThan7Days = modificationDiff < Duration(days: 7);
+          if (newerThan7Days) return file;
+        } else {
+          await file.delete();
+        }
       }
+
+      await file.parent.create(recursive: true);
+
       final fileBytes = await storage.from("posts").download(remotePath);
+      if (fileBytes.isEmpty) {
+        throw Exception("Vídeo baixado de $remotePath está vazio.");
+      }
       await file.writeAsBytes(fileBytes);
       return file;
     } catch (e, trace) {
+      if (await file.exists()) {
+        try {
+          await file.delete();
+        } catch (_) {}
+      }
       debugPrint(trace.toString());
       debugPrint(e.toString());
       debugPrint(jsonEncode(midia.toMap()));

@@ -17,6 +17,7 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  AuthState? lastState;
   late StreamSubscription<AuthState> streamSubscription;
 
   @override
@@ -25,9 +26,25 @@ class _SplashScreenState extends State<SplashScreen> {
     streamSubscription = AuthRepository.onAuthStateChange.listen((
       authState,
     ) async {
+      if (lastState != null &&
+          lastState?.session == null &&
+          authState.session == null) {
+        return;
+      }
+      if (lastState != null &&
+          lastState?.session?.isExpired == true &&
+          authState.session?.isExpired == true) {
+        return;
+      }
+      if (lastState != null &&
+          lastState?.session?.isExpired == false &&
+          authState.session?.isExpired == false) {
+        return;
+      }
       if (authState.session == null) {
+        lastState = authState;
         if (!context.mounted) return;
-        Navigator.push(
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) {
@@ -37,11 +54,11 @@ class _SplashScreenState extends State<SplashScreen> {
         );
         return;
       }
-      // await AuthRepository.sendFirebaseToken();
       if (!context.mounted) return;
       verificaPermissoes(context).then((concedidas) {
+        lastState = authState;
         if (!context.mounted) return;
-        Navigator.push(
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) {
@@ -65,22 +82,27 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: AuthRepository.onAuthStateChange,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            backgroundColor: Colors.white,
-            body: Stack(
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: StreamBuilder(
+        stream: AuthRepository.onAuthStateChange,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Stack(
               children: [
-                // Logo Centralizada
                 Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Image.asset('assets/icons/logo-texto.png', width: 200),
+                      Image(
+                        image: AssetImage('assets/icons/logo-icone.png'),
+                        loadingBuilder: (context, child, loading) {
+                          if (loading == null) return child;
+                          return SizedBox.shrink();
+                        },
+                        width: 200,
+                      ),
                       SizedBox(height: 24),
-                      // Indicador de carregamento em Azul (cor da sua logo)
                       CircularProgressIndicator(
                         valueColor: AlwaysStoppedAnimation<Color>(
                           Color(0xFF0056b3),
@@ -105,12 +127,15 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                 ),
               ],
+            );
+          }
+          return Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0056b3)),
             ),
           );
-        } else {
-          return Placeholder();
-        }
-      },
+        },
+      ),
     );
   }
 

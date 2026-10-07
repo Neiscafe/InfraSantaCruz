@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
-import 'package:camera/camera.dart';
+import 'package:camera/camera.dart' hide ImageFormat;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
@@ -14,7 +16,9 @@ import 'package:myapp/PostsRepository.dart';
 import 'package:myapp/SeletorLocalizacao.dart';
 import 'package:myapp/TirarFotoPage.dart';
 import 'package:myapp/VideoThumbnailWidget.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:uuid/uuid.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 
 import 'DisplayVideoScreen.dart';
 import 'Post.dart';
@@ -30,16 +34,17 @@ class PhotoMenuPage extends StatefulWidget {
 
 class _PhotoMenuPageState extends State<PhotoMenuPage> {
   ValueNotifier<bool> loading = ValueNotifier(false);
+  late StreamSubscription<List<XFile>> _fileStreamSubscription;
   final ValueNotifier<bool> canFinish = ValueNotifier(false);
   final ValueNotifier<EnderecoGeocode?> enderecoGeocode = ValueNotifier(null);
   final referenciaLocalizacaoController = TextEditingController();
   final tituloController = TextEditingController();
   final descricaoController = TextEditingController();
-  ValueNotifier<List<XFile>> midiasPost = ValueNotifier(List.empty());
+  ValueNotifier<List<XFile>> _midiasPost = ValueNotifier(List.empty());
 
   void validaCampos() {
     final camposValidados =
-        midiasPost.value.isNotEmpty &&
+        _midiasPost.value.isNotEmpty &&
         tituloController.text.isNotEmpty &&
         descricaoController.text.isNotEmpty &&
         enderecoGeocode.value != null;
@@ -69,7 +74,10 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
   @override
   void initState() {
     super.initState();
-    midiasPost.value = PostsRepository.midiasPost;
+    _fileStreamSubscription = PostsRepository.midiasPostStream.listen((list) {
+      _midiasPost.value = list;
+      validaCampos();
+    });
     tituloController.addListener(() {
       validaCampos();
     });
@@ -84,6 +92,8 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
     tituloController.dispose();
     descricaoController.dispose();
     referenciaLocalizacaoController.dispose();
+    _fileStreamSubscription.cancel();
+    PostsRepository.limpaImagens();
     super.dispose();
   }
 
@@ -99,9 +109,8 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
         MediaListWidget(
           mediaFiles: value,
           onAdd: () => exibeDialogInserirEvidencias(context),
-          onDelete: (file) {
-            PostsRepository.deletaMidia(file);
-            midiasPost.value = PostsRepository.midiasPost;
+          onDelete: (file) async {
+            PostsRepository.removeImagem(file);
           },
         ),
         SizedBox(height: 8),
@@ -208,7 +217,7 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     ValueListenableBuilder(
-                      valueListenable: midiasPost,
+                      valueListenable: _midiasPost,
                       builder: (context, value, child) {
                         return _evidenciasControls(value);
                       },
@@ -432,6 +441,9 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
   }
 
   void abreMapaLocalizacao() async {
+    while (!(await Permission.location.isGranted)) {
+      await Permission.location.request();
+    }
     try {
       final enderecoGeocode = this.enderecoGeocode.value!;
       final currentLocation = LatLong(enderecoGeocode.lat, enderecoGeocode.lon);
@@ -484,8 +496,6 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
                   await Navigator.of(context).push(
                     MaterialPageRoute(builder: (context) => TirarFotoPage()),
                   );
-                  midiasPost.value = PostsRepository.midiasPost.toList();
-                  validaCampos();
                 },
                 child: Row(
                   spacing: 8,
@@ -537,6 +547,9 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
   }
 
   void usaLocalizacaoAtual() async {
+    while (!(await Permission.location.isGranted)) {
+      await Permission.location.request();
+    }
     final currentLocation = await LocationService.getCurrentPosition();
     final res = await placemarkFromCoordinates(
       currentLocation.latitude,
@@ -567,14 +580,21 @@ class _PhotoMenuPageState extends State<PhotoMenuPage> {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
       type: FileType.custom,
-      allowedExtensions: ["pdf", "jpeg", "png", "jpg", "mp4"],
+      allowedExtensions: [
+        "jpeg",
+        "png",
+        "jpg",
+        "mp4",
+        "mov",
+        "heic",
+        "webp",
+        "heif",
+      ],
     );
     if (result != null && result.files.isNotEmpty) {
       for (var file in result.files) {
         PostsRepository.adicionaMidia(file.xFile);
       }
-      midiasPost.value = PostsRepository.midiasPost.toList();
-      validaCampos();
     }
   }
 }
@@ -631,7 +651,7 @@ class MediaListWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final parentHeight = 180.0;
+    final parentHeight = 80.0;
     return SizedBox(
       height: mediaFiles.isEmpty ? 0 : parentHeight,
       child: ListView.separated(
@@ -641,7 +661,90 @@ class MediaListWidget extends StatelessWidget {
         itemBuilder: ((context, index) {
           final file = mediaFiles[index];
           final mimeType = lookupMimeType(file.path);
-          return mediaThumbnail(mimeType, file, context);
+          if (mimeType?.contains("image/") == true) {
+            return thumbnail(
+              width: 80,
+              height: 80,
+              onLongPress: () => exibeDialogDeletar(context, file),
+              onTapUp: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DisplayPictureScreen(
+                      imagePath: file.path,
+                      readOnly: false,
+                    ),
+                  ),
+                );
+              },
+              child: Image(
+                image: FileImage(File(file.path)),
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return SizedBox.expand(
+                    child: Container(
+                      color: Colors.grey[200],
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  );
+                },
+              ),
+            );
+          } else if (mimeType?.contains("video/") == true) {
+            return thumbnail(
+              width: 80,
+              height: 80,
+              onLongPress: () => exibeDialogDeletar(context, file),
+              onTapUp: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) {
+                      return DisplayVideoScreen(
+                        imagePath: file.path,
+                        readOnly: false,
+                      );
+                    },
+                  ),
+                );
+              },
+              child: FutureBuilder(
+                future: VideoThumbnail.thumbnailData(
+                  video: file.path,
+                  imageFormat: ImageFormat.JPEG,
+                  maxWidth: 80,
+                  quality: 75,
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    return Stack(
+                      children: [
+                        SizedBox.expand(
+                          child: Image.memory(
+                            snapshot.data!,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        Center(child: Icon(Icons.play_circle)),
+                      ],
+                    );
+                  } else if (snapshot.hasError) {
+                    PostsRepository.removeImagem(file);
+                    return SizedBox.shrink();
+                  } else {
+                    return SizedBox.expand(
+                      child: Container(
+                        color: Colors.grey[200],
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    );
+                  }
+                },
+              ),
+            );
+          }
+          return SizedBox.shrink();
         }),
         separatorBuilder: (BuildContext context, int index) {
           return SizedBox(width: 8);
@@ -686,6 +789,34 @@ class MediaListWidget extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget thumbnail({
+    required int width,
+    required int height,
+    required VoidCallback onTapUp,
+    required VoidCallback onLongPress,
+    required Widget child,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadiusGeometry.circular(14),
+      child: Material(
+        borderRadius: BorderRadiusGeometry.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTapUp: (_) {
+            onTapUp();
+          },
+          onLongPress: onLongPress,
+          child: Ink(
+            width: width.toDouble(),
+            height: height.toDouble(),
+            decoration: BoxDecoration(color: Colors.grey[300]),
+            child: child,
+          ),
+        ),
+      ),
     );
   }
 

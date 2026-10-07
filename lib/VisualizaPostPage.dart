@@ -248,14 +248,13 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
         var createdDateTime = post.createdDateTime;
         int epochPost = createdDateTime.millisecondsSinceEpoch;
         int epochNow = DateTime.now().millisecondsSinceEpoch;
-        int diffNowPost = epochNow - epochPost;
-        int vinteQuatroHoras = 86400000;
-        int sessentaMinutos = 60000;
+        int diffNowPost = ((epochNow - epochPost) / 1000).toInt();
+        int sessentaMinutos = 3600;
+        int vinteQuatroHoras = sessentaMinutos * 24;
         if (diffNowPost < sessentaMinutos) {
-          text = "Postado ${(diffNowPost / 1000 / 60).toInt()} minutos atrás";
+          text = "Postado ${(diffNowPost / 60).toInt()} minutos atrás";
         } else if (diffNowPost <= vinteQuatroHoras) {
-          text =
-              "Postado ${(diffNowPost / 1000 / 60 / 60).toInt()} horas atrás";
+          text = "Postado ${(diffNowPost / 60 / 60).toInt()} horas atrás";
         } else {
           String day = "${createdDateTime.day}".padLeft(2, '0');
           String month = "${createdDateTime.month}".padLeft(2, '0');
@@ -592,6 +591,7 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
           ),
           child: Row(
             mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: TextField(
@@ -603,9 +603,10 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
                   ),
                 ),
               ),
-              ElevatedButton(
+              IconButton(
+                style: ElevatedButton.styleFrom(elevation: 0),
                 onPressed: () async {
-                  await escreverComentario(
+                  escreverComentario(
                     Comentario(
                       text: _comentarioController.text,
                       postId: post.id,
@@ -615,7 +616,7 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
                   _comentarioController.clear();
                   Navigator.of(context).pop();
                 },
-                child: Icon(Icons.send),
+                icon: Icon(Icons.send, color: Colors.blue[500]),
               ),
             ],
           ),
@@ -1094,7 +1095,10 @@ class _FeedMediaItemState extends State<FeedMediaItem> {
                 context,
                 MaterialPageRoute(
                   builder: (context) {
-                    return DisplayPictureScreen(imagePath: fileInfo!.file.path, readOnly: true,);
+                    return DisplayPictureScreen(
+                      imagePath: fileInfo!.file.path,
+                      readOnly: true,
+                    );
                   },
                 ),
               );
