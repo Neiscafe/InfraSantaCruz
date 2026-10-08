@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -495,7 +494,9 @@ class _TirarFotoPageState extends State<TirarFotoPage>
   }
 
   void _stopRecording(BuildContext context) async {
-    if (_stoppingRecording || !context.mounted) {
+    if (_stoppingRecording ||
+        !context.mounted ||
+        (_videoDurationValue ?? 0) < 3) {
       return;
     }
     setState(() {

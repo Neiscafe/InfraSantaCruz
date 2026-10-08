@@ -219,12 +219,14 @@ class _UserPageState extends State<UserPage> {
             ],
           ),
         ),
+        SizedBox(height: 16,),
         Center(
           child: Text(
             widget.user.fullName,
-            style: TextStyle(fontSize: 32, color: Colors.black),
+            style: TextStyle(fontSize: 24, color: Colors.grey[900], fontWeight: FontWeight.w400),
           ),
         ),
+        SizedBox(height: 16,),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Card.filled(
@@ -239,16 +241,17 @@ class _UserPageState extends State<UserPage> {
                     spacing: 8,
                     children: [
                       Icon(Icons.email_outlined),
-                      Text(widget.user.email!, style: TextStyle(fontSize: 18)),
+                      Text(widget.user.email!, style: TextStyle(fontSize: 16)),
                     ],
                   ),
+                  SizedBox(height: 4,),
                   Row(
                     spacing: 8,
                     children: [
                       Icon(Icons.account_circle_outlined),
                       Text(
                         "Cadastro em $day/$month/$year",
-                        style: TextStyle(fontSize: 18),
+                        style: TextStyle(fontSize: 16),
                       ),
                     ],
                   ),

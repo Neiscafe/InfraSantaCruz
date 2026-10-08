@@ -15,6 +15,7 @@ import 'package:myapp/PostsCurtidosPage.dart';
 import 'package:myapp/PostsRepository.dart';
 import 'package:myapp/UserPage.dart';
 import 'package:myapp/VisualizaPostPage.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'NotificationRouter.dart';
 import 'Post.dart';
@@ -360,15 +361,14 @@ class _PostCardWidgetState extends State<PostCardWidget> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _tituloWidget(),
                 SizedBox(height: 4),
-                if (post.referenciaLocalizacao.isNotEmpty) ...[
-                  _localizacaoWidget(),
-                  SizedBox(height: 4),
-                ],
                 _descricaoWidget(),
+                SizedBox(height: 8),
+                _referenciaLocalizacaoWidget(),
+                SizedBox(height: 4),
               ],
             ),
           ),
@@ -400,19 +400,58 @@ class _PostCardWidgetState extends State<PostCardWidget> {
     );
   }
 
-  Row _localizacaoWidget() {
-    return Row(
-      children: [
-        Icon(Icons.location_on, size: 16, color: Colors.grey[800]),
-        SizedBox(width: 4),
-        Text(
-          post.referenciaLocalizacao,
-          style: TextStyle(
-            color: Colors.grey[800],
-            fontWeight: FontWeight.bold,
-          ),
+  Widget _referenciaLocalizacaoWidget() {
+    return Card.filled(
+      margin: EdgeInsets.zero,
+      color: Colors.grey[200],
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.place_outlined, color: Colors.grey[900]),
+            SizedBox(width: 4),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "${post.rua}, ${post.bairro.isNotEmpty ? "Bairro ${post.bairro}" : ""}",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[900],
+                      fontSize: 16,
+                    ),
+                  ),
+                  if (post.referenciaLocalizacao.isNotEmpty)
+                    Text(
+                      post.referenciaLocalizacao,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w400,
+                        color: Colors.grey[900],
+                        fontSize: 16,
+                      ),
+                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () async {
+                          launchUrl(
+                            Uri.parse("geo:0,0?q=${post.lat},${post.lon}(${post.titulo})"),
+                            mode: LaunchMode.externalApplication,
+                          );
+                        },
+                        child: Text("Ver no mapa"),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
