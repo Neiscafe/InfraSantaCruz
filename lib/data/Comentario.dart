@@ -1,6 +1,6 @@
 import 'package:uuid/v4.dart';
 
-import 'Usuario.dart';
+import '../data/Usuario.dart';
 
 class Comentario {
   final String text;

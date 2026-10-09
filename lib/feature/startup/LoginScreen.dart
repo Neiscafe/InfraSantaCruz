@@ -1,23 +1,23 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:myapp/Consts.dart';
-import 'package:myapp/HomePage.dart';
-import 'package:myapp/PermissaoPage.dart';
+import 'package:myapp/consts/Consts.dart';
+import 'package:myapp/feature/startup/PermissionScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'AuthRepository.dart';
+import '../../data/repository/AuthRepository.dart';
 
-class LoginPage extends StatefulWidget {
+class LoginScreen extends StatefulWidget {
   final bool isRedirect;
   final Stream<AuthState>? authStream;
 
-  const LoginPage({super.key, this.isRedirect = false, this.authStream});
+  const LoginScreen({super.key, this.isRedirect = false, this.authStream});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginScreenState extends State<LoginScreen> {
   late final Stream<AuthState> _stream;
   StreamSubscription<AuthState>? _authStateSubscription;
 
@@ -32,7 +32,7 @@ class _LoginPageState extends State<LoginPage> {
           Navigator.of(context).pop();
         } else {
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const PermissaoPage()),
+            MaterialPageRoute(builder: (context) => const PermissionScreen()),
           );
         }
       }

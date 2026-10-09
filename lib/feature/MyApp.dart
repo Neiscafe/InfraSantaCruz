@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:myapp/AuthRepository.dart';
-import 'package:myapp/ConnectivityWrapper.dart';
-import 'package:myapp/SplashScreen.dart';
+import 'package:myapp/feature/startup/ConnectivityWrapper.dart';
+import 'package:myapp/feature/startup/SplashScreen.dart';
+
+import '../data/repository/AuthRepository.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

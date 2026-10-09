@@ -6,7 +6,14 @@ import 'package:flutter_svg/flutter_svg.dart';
 class Assets {
   Assets._();
 
-  static const $AssetsIconsGen icons = $AssetsIconsGen();
+  static const $AssetsAssetsGen assets = $AssetsAssetsGen();
+  static const $AssetsLibGen lib = $AssetsLibGen();
+}
+
+class $AssetsAssetsGen {
+  const $AssetsAssetsGen();
+
+  final $AssetsIconsGen icons = const $AssetsIconsGen();
 }
 
 class $AssetsIconsGen {
@@ -15,6 +22,65 @@ class $AssetsIconsGen {
   final AssetGenImage logoIcone = const AssetGenImage(
     'assets/icons/logo-icone.png',
   );
+}
+
+class $AssetsLibGen {
+  const $AssetsLibGen();
+
+  final $AssetsFeatureGen feature = const $AssetsFeatureGen();
+}
+
+class $AssetsFeatureGen {
+  const $AssetsFeatureGen();
+
+  final $AssetsEvidenceGen evidence = const $AssetsEvidenceGen();
+  final $AssetsLocationGen location = const $AssetsLocationGen();
+  final $AssetsPostsGen posts = const $AssetsPostsGen();
+  final $AssetsStartupGen startup = const $AssetsStartupGen();
+  final String myApp = 'lib/feature/MyApp.dart';
+  final String notificationRouter = 'lib/feature/NotificationRouter.dart';
+}
+
+class $AssetsPostsGen {
+  const $AssetsPostsGen();
+
+  final String homePage = 'lib/feature/posts/PostsHomeScreen.dart';
+  final String photoMenuPage = 'lib/feature/posts/PostCreationScreen.dart';
+  final String postsCurtidosPage = 'lib/feature/posts/PostsCurtidosScreen.dart';
+  final String userPage = 'lib/feature/posts/UserPostsScreen.dart';
+  final String visualizaPostPage = 'lib/feature/posts/PostDetailsScreen.dart';
+}
+
+class $AssetsStartupGen {
+  const $AssetsStartupGen();
+
+  final String connectivityWrapper =
+      'lib/feature/startup/ConnectivityWrapper.dart';
+  final String loginPage = 'lib/feature/startup/LoginScreen.dart';
+  final String permissaoPage = 'lib/feature/startup/PermissionScreen.dart';
+  final String splashScreen = 'lib/feature/startup/SplashScreen.dart';
+}
+
+class $AssetsEvidenceGen {
+  const $AssetsEvidenceGen();
+
+  final String displayPictureScreen =
+      'lib/feature/evidence/DisplayPictureScreen.dart';
+  final String displayVideoScreen =
+      'lib/feature/evidence/DisplayVideoScreen.dart';
+  final String imageThumbnailWidget =
+      'lib/feature/evidence/ImageThumbnailWidget.dart';
+  final String tirarFotoPage = 'lib/feature/evidence/TirarFotoPage.dart';
+  final String videoThumbnailWidget =
+      'lib/feature/evidence/VideoThumbnailWidget.dart';
+}
+
+class $AssetsLocationGen {
+  const $AssetsLocationGen();
+
+  final String seletorLocalizacao =
+      'lib/feature/location/SeletorLocalizacao.dart';
+  final String visualizaLocal = 'lib/feature/location/VisualizaLocal.dart';
 }
 
 class AssetGenImage {

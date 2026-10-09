@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:myapp/HomePage.dart';
+import 'package:myapp/feature/posts/PostsHomeScreen.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-class PermissaoPage extends StatelessWidget {
-  const PermissaoPage({super.key});
+class PermissionScreen extends StatelessWidget {
+  const PermissionScreen({super.key});
 
   Future<void> pedePermissoes(BuildContext context) async {
     ServiceStatus serviceStatus = await Permission.location.serviceStatus;
@@ -43,7 +43,7 @@ class PermissaoPage extends StatelessWidget {
       );
       Navigator.of(
         context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => HomePage()));
+      ).pushReplacement(MaterialPageRoute(builder: (_) => PostsHomeScreen()));
     } else {
       erroPermissoesNegadas(context);
     }

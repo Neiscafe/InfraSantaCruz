@@ -1,13 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:myapp/AuthRepository.dart';
-import 'package:myapp/HomePage.dart';
-import 'package:myapp/LoginPage.dart';
+import 'package:myapp/feature/posts/PostsHomeScreen.dart';
+import 'package:myapp/feature/startup/LoginScreen.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'PermissaoPage.dart';
+import '../../data/repository/AuthRepository.dart';
+import 'PermissionScreen.dart';
 
 class SplashScreen extends StatefulWidget {
   SplashScreen({Stream<AuthState>? stream, super.key});
@@ -48,7 +48,7 @@ class _SplashScreenState extends State<SplashScreen> {
           context,
           MaterialPageRoute(
             builder: (context) {
-              return LoginPage();
+              return LoginScreen();
             },
           ),
         );
@@ -63,9 +63,9 @@ class _SplashScreenState extends State<SplashScreen> {
           MaterialPageRoute(
             builder: (context) {
               if (concedidas) {
-                return HomePage();
+                return PostsHomeScreen();
               } else {
-                return PermissaoPage();
+                return PermissionScreen();
               }
             },
           ),

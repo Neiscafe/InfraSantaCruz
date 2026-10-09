@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:gal/gal.dart';
-import 'package:myapp/PostsRepository.dart';
+import 'package:myapp/data/repository/PostsRepository.dart';
 
 class DisplayPictureScreen extends StatelessWidget {
   final String imagePath;

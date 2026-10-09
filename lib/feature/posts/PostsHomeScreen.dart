@@ -6,29 +6,29 @@ import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import 'package:myapp/AuthRepository.dart';
-import 'package:myapp/Consts.dart';
-import 'package:myapp/DisplayPictureScreen.dart';
-import 'package:myapp/DisplayVideoScreen.dart';
-import 'package:myapp/PhotoMenuPage.dart';
-import 'package:myapp/PostsCurtidosPage.dart';
-import 'package:myapp/PostsRepository.dart';
-import 'package:myapp/UserPage.dart';
-import 'package:myapp/VisualizaPostPage.dart';
+import 'package:myapp/data/repository/AuthRepository.dart';
+import 'package:myapp/consts/Consts.dart';
+import 'package:myapp/feature/evidence/DisplayPictureScreen.dart';
+import 'package:myapp/feature/evidence/DisplayVideoScreen.dart';
+import 'package:myapp/feature/posts/PostCreationScreen.dart';
+import 'package:myapp/feature/posts/PostsCurtidosScreen.dart';
+import 'package:myapp/data/repository/PostsRepository.dart';
+import 'package:myapp/feature/posts/UserPostsScreen.dart';
+import 'package:myapp/feature/posts/PostDetailsScreen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'NotificationRouter.dart';
-import 'Post.dart';
-import 'Usuario.dart';
+import '../../data/Post.dart';
+import '../../data/Usuario.dart';
+import '../NotificationRouter.dart';
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class PostsHomeScreen extends StatefulWidget {
+  const PostsHomeScreen({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<PostsHomeScreen> createState() => _PostsHomeScreenState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _PostsHomeScreenState extends State<PostsHomeScreen> {
   List<Post> posts = List.empty();
   bool loading = true;
   bool silentLoading = false;
@@ -92,7 +92,7 @@ class _HomePageState extends State<HomePage> {
         onPressed: () {
           Navigator.of(
             context,
-          ).push(MaterialPageRoute(builder: (_) => PhotoMenuPage()));
+          ).push(MaterialPageRoute(builder: (_) => PostCreationScreen()));
         },
       ),
       appBar: AppBar(
@@ -104,7 +104,7 @@ class _HomePageState extends State<HomePage> {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) =>
-                        UserPage(user: AuthRepository.usuarioAtual),
+                        UserPostsScreen(user: AuthRepository.usuarioAtual),
                   ),
                 ),
           ),
@@ -118,7 +118,7 @@ class _HomePageState extends State<HomePage> {
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => const PostsCurtidosPage(),
+                  builder: (context) => const PostsCurtidosScreen(),
                 ),
               );
             },
@@ -169,7 +169,7 @@ class _HomePageState extends State<HomePage> {
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (context) {
-                                  return VisualizaPostPage(post: post);
+                                  return PostDetailsScreen(post: post);
                                 },
                               ),
                             );
@@ -178,7 +178,7 @@ class _HomePageState extends State<HomePage> {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (contenxt) =>
-                                      UserPage(user: profile),
+                                      UserPostsScreen(user: profile),
                                 ),
                               ),
                         );

@@ -5,15 +5,15 @@ import 'dart:io';
 import 'package:camera/camera.dart' hide ImageFormat;
 import 'package:flutter/foundation.dart';
 import 'package:mime/mime.dart';
-import 'package:myapp/AuthRepository.dart';
-import 'package:myapp/Comentario.dart';
-import 'package:myapp/Texto.dart';
+import 'package:myapp/data/Comentario.dart';
+import 'package:myapp/data/Texto.dart';
+import 'package:myapp/data/repository/AuthRepository.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/v4.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 
-import 'Post.dart';
+import '../Post.dart';
 
 sealed class OrdemPosts {}
 

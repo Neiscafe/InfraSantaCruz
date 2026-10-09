@@ -5,26 +5,26 @@ import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import 'package:myapp/AuthRepository.dart';
 
-import 'Comentario.dart';
-import 'Consts.dart';
-import 'DisplayPictureScreen.dart';
-import 'DisplayVideoScreen.dart';
-import 'Post.dart';
-import 'PostsRepository.dart';
-import 'UserPage.dart';
+import '../../consts/Consts.dart';
+import '../../data/Comentario.dart';
+import '../../data/Post.dart';
+import '../../data/repository/AuthRepository.dart';
+import '../../data/repository/PostsRepository.dart';
+import '../evidence/DisplayPictureScreen.dart';
+import '../evidence/DisplayVideoScreen.dart';
+import 'UserPostsScreen.dart';
 
-class VisualizaPostPage extends StatefulWidget {
+class PostDetailsScreen extends StatefulWidget {
   final Post post;
 
-  const VisualizaPostPage({super.key, required this.post});
+  const PostDetailsScreen({super.key, required this.post});
 
   @override
-  _VisualizaPostPageState createState() => _VisualizaPostPageState();
+  _PostDetailsScreenState createState() => _PostDetailsScreenState();
 }
 
-class _VisualizaPostPageState extends State<VisualizaPostPage> {
+class _PostDetailsScreenState extends State<PostDetailsScreen> {
   late Post post;
   Post? _pendingPost;
   Timer? _likeDebounceTimer;
@@ -203,7 +203,7 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
           onTapUp: (_) {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (contenxt) => UserPage(user: post.usuario),
+                builder: (contenxt) => UserPostsScreen(user: post.usuario),
               ),
             );
           },

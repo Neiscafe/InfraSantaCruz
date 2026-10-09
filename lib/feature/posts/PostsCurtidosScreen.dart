@@ -1,21 +1,22 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:myapp/Consts.dart';
-import 'package:myapp/HomePage.dart';
-import 'package:myapp/Post.dart';
-import 'package:myapp/PostsRepository.dart';
-import 'package:myapp/VisualizaPostPage.dart';
+import 'package:myapp/consts/Consts.dart';
+import 'package:myapp/data/repository/PostsRepository.dart';
+import 'package:myapp/feature/posts/PostsHomeScreen.dart';
+import 'package:myapp/feature/posts/PostDetailsScreen.dart';
 
-import 'UserPage.dart';
+import '../../data/Post.dart';
+import 'UserPostsScreen.dart';
 
-class PostsCurtidosPage extends StatefulWidget {
-  const PostsCurtidosPage({super.key});
+class PostsCurtidosScreen extends StatefulWidget {
+  const PostsCurtidosScreen({super.key});
 
   @override
-  State<PostsCurtidosPage> createState() => _PostsCurtidosPageState();
+  State<PostsCurtidosScreen> createState() => _PostsCurtidosScreenState();
 }
 
-class _PostsCurtidosPageState extends State<PostsCurtidosPage> {
+class _PostsCurtidosScreenState extends State<PostsCurtidosScreen> {
   List<Post> posts = [];
   bool loading = true;
   bool silentLoading = false;
@@ -202,7 +203,7 @@ class _PostsCurtidosPageState extends State<PostsCurtidosPage> {
                   navega: () async {
                     final updatedPost = await Navigator.of(context).push<Post>(
                       MaterialPageRoute(
-                        builder: (context) => VisualizaPostPage(post: post),
+                        builder: (context) => PostDetailsScreen(post: post),
                       ),
                     );
                     if (updatedPost != null && mounted) {
@@ -219,13 +220,12 @@ class _PostsCurtidosPageState extends State<PostsCurtidosPage> {
                         });
                       }
                     }
-                  },onProfileTouch: (profile)=>
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (contenxt) =>
-                            UserPage(user: profile),
-                      ),
-                    )
+                  },
+                  onProfileTouch: (profile) => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (contenxt) => UserPostsScreen(user: profile),
+                    ),
+                  ),
                 );
               },
             ),

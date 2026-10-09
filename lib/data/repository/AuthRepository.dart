@@ -2,9 +2,10 @@ import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:myapp/LoginPage.dart';
-import 'package:myapp/Usuario.dart';
+import 'package:myapp/feature/startup/LoginScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../Usuario.dart';
 
 class AuthRepository {
   static final GlobalKey<NavigatorState> navigatorKey =
@@ -72,7 +73,7 @@ class AuthRepository {
 
       await Navigator.of(navContext).push(
         MaterialPageRoute(
-          builder: (context) => const LoginPage(isRedirect: true),
+          builder: (context) => const LoginScreen(isRedirect: true),
         ),
       );
     }

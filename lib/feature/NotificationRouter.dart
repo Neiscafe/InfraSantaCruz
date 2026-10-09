@@ -1,9 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:myapp/AuthRepository.dart';
-import 'package:myapp/PostsRepository.dart';
-import 'package:myapp/VisualizaPostPage.dart';
+import 'package:myapp/data/repository/PostsRepository.dart';
+import 'package:myapp/feature/posts/PostDetailsScreen.dart';
+
+import '../data/repository/AuthRepository.dart';
 
 /// Decide para onde o app vai quando o usuário toca em uma notificação.
 ///
@@ -82,7 +83,7 @@ class NotificationRouter {
         return;
       }
       nav.push(
-        MaterialPageRoute(builder: (_) => VisualizaPostPage(post: post)),
+        MaterialPageRoute(builder: (_) => PostDetailsScreen(post: post)),
       );
     } catch (e) {
       debugPrint('Erro ao abrir post da notificação: $e');

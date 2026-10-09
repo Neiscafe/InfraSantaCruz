@@ -1,26 +1,26 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:myapp/AuthRepository.dart';
-import 'package:myapp/HomePage.dart';
-import 'package:myapp/LoginPage.dart';
-import 'package:myapp/Usuario.dart';
+import 'package:myapp/data/Usuario.dart';
+import 'package:myapp/data/repository/AuthRepository.dart';
+import 'package:myapp/feature/posts/PostsHomeScreen.dart';
+import 'package:myapp/feature/startup/LoginScreen.dart';
 
-import 'Consts.dart';
-import 'Post.dart';
-import 'PostsRepository.dart';
-import 'VisualizaPostPage.dart';
+import '../../consts/Consts.dart';
+import '../../data/Post.dart';
+import '../../data/repository/PostsRepository.dart';
+import 'PostDetailsScreen.dart';
 
-class UserPage extends StatefulWidget {
+class UserPostsScreen extends StatefulWidget {
   final Usuario user;
 
-  const UserPage({super.key, required this.user});
+  const UserPostsScreen({super.key, required this.user});
 
   @override
-  State<UserPage> createState() => _UserPageState();
+  State<UserPostsScreen> createState() => _UserPostsScreenState();
 }
 
-class _UserPageState extends State<UserPage> {
+class _UserPostsScreenState extends State<UserPostsScreen> {
   List<Post> posts = List.empty();
   bool loading = true;
   bool silentLoading = false;
@@ -176,14 +176,14 @@ class _UserPageState extends State<UserPage> {
                   post,
                   navega: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => VisualizaPostPage(post: post),
+                      builder: (context) => PostDetailsScreen(post: post),
                     ),
                   ),
                   onProfileTouch: (profile) {
                     if (profile.usuarioId == widget.user.usuarioId) return;
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (contenxt) => UserPage(user: profile),
+                        builder: (contenxt) => UserPostsScreen(user: profile),
                       ),
                     );
                   },
@@ -333,7 +333,7 @@ class _UserPageState extends State<UserPage> {
       Navigator.of(context).popUntil((route) => false);
       Navigator.of(
         context,
-      ).push(MaterialPageRoute(builder: (context) => LoginPage()));
+      ).push(MaterialPageRoute(builder: (context) => LoginScreen()));
     } catch (e, trace) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:gal/gal.dart';
 import 'package:video_player/video_player.dart';
 
-import 'PostsRepository.dart';
+import '../../data/repository/PostsRepository.dart';
 
 class DisplayVideoScreen extends StatefulWidget {
   final String imagePath;

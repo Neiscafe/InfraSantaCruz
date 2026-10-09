@@ -5,11 +5,11 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
-import 'package:myapp/AuthRepository.dart';
-import 'package:myapp/MyApp.dart';
-import 'package:myapp/NotificationRouter.dart';
+import 'package:myapp/feature/MyApp.dart';
+import 'package:myapp/feature/NotificationRouter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'data/repository/AuthRepository.dart';
 import 'firebase_options.dart';
 
 final supabase = Supabase.instance.client;

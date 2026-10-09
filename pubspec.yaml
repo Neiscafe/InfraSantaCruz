@@ -96,3 +96,8 @@ flutter:
 
   assets:
     - assets/icons/
+    - lib/feature/
+    - lib/feature/posts/
+    - lib/feature/startup/
+    - lib/feature/evidence/
+    - lib/feature/location/

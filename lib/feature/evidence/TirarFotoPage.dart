@@ -4,8 +4,8 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mime/mime.dart';
-import 'package:myapp/DisplayPictureScreen.dart';
-import 'package:myapp/DisplayVideoScreen.dart';
+import 'package:myapp/feature/evidence/DisplayPictureScreen.dart';
+import 'package:myapp/feature/evidence/DisplayVideoScreen.dart';
 import 'package:native_device_orientation/native_device_orientation.dart';
 
 class TirarFotoPage extends StatefulWidget {

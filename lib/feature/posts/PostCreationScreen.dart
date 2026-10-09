@@ -8,31 +8,31 @@ import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:location_picker_flutter_map/location_picker_flutter_map.dart';
 import 'package:mime/mime.dart';
-import 'package:myapp/AuthRepository.dart';
-import 'package:myapp/Consts.dart';
-import 'package:myapp/DisplayPictureScreen.dart';
-import 'package:myapp/EnderecoGeocode.dart';
-import 'package:myapp/PostsRepository.dart';
-import 'package:myapp/SeletorLocalizacao.dart';
-import 'package:myapp/TirarFotoPage.dart';
-import 'package:myapp/VideoThumbnailWidget.dart';
+import 'package:myapp/consts/Consts.dart';
+import 'package:myapp/feature/evidence/DisplayPictureScreen.dart';
+import 'package:myapp/data/EnderecoGeocode.dart';
+import 'package:myapp/data/repository/PostsRepository.dart';
+import 'package:myapp/feature/location/SeletorLocalizacao.dart';
+import 'package:myapp/feature/evidence/TirarFotoPage.dart';
+import 'package:myapp/feature/evidence/VideoThumbnailWidget.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:uuid/uuid.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 
-import 'DisplayVideoScreen.dart';
-import 'Post.dart';
+import '../../data/Post.dart';
+import '../../data/repository/AuthRepository.dart';
+import '../evidence/DisplayVideoScreen.dart';
 
-class PhotoMenuPage extends StatefulWidget {
+class PostCreationScreen extends StatefulWidget {
   final String? postId;
 
-  const PhotoMenuPage({this.postId, super.key});
+  const PostCreationScreen({this.postId, super.key});
 
   @override
-  State<PhotoMenuPage> createState() => _PhotoMenuPageState();
+  State<PostCreationScreen> createState() => _PostCreationScreenState();
 }
 
-class _PhotoMenuPageState extends State<PhotoMenuPage> {
+class _PostCreationScreenState extends State<PostCreationScreen> {
   ValueNotifier<bool> loading = ValueNotifier(false);
   late StreamSubscription<List<XFile>> _fileStreamSubscription;
   final ValueNotifier<bool> canFinish = ValueNotifier(false);
