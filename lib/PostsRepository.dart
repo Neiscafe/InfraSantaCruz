@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:mime/mime.dart';
 import 'package:myapp/AuthRepository.dart';
 import 'package:myapp/Comentario.dart';
+import 'package:myapp/Texto.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/v4.dart';
@@ -177,6 +178,15 @@ class PostsRepository {
           .insert(
             post
                 .copy(
+                  titulo: Texto.limpar(post.titulo, max: 200),
+                  descricao: Texto.limpar(post.descricao, max: 1000),
+                  referenciaLocalizacao: Texto.limpar(
+                    post.referenciaLocalizacao,
+                    max: 200,
+                  ),
+                  rua: Texto.limpar(post.rua, max: 200),
+                  bairro: Texto.limpar(post.bairro, max: 200),
+                  cidade: Texto.limpar(post.cidade, max: 200),
                   jsonMidias: filesData.map((fileData) {
                     return PostMidia(
                       publicUrl: fileData['publicUrl'],
