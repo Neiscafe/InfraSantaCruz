@@ -11,6 +11,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'data/repository/AuthRepository.dart';
 import 'firebase_options.dart';
+const _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+const _supabaseKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
 final supabase = Supabase.instance.client;
 
@@ -88,8 +90,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
-    url: 'https://yombhmzdpmffekqhdtrv.supabase.co',
-    anonKey: 'sb_publishable_WnnTd11M1Lv_n5ookD45uQ_ZJYzav3l',
+    url: _supabaseUrl,
+    anonKey: _supabaseKey,
   );
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
