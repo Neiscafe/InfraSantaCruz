@@ -420,7 +420,7 @@ class PostsRepository {
     try {
       final response = await client
           .from("post_comments")
-          .insert(comentario.toJson())
+          .insert(comentario.copy(text: Texto.limpar(comentario.text)).toJson())
           .select(
             "*, usuario:users!post_comments_usuario_id_fkey(*), reply_username:users!post_comments_user_reply_id_fkey(full_name)",
           );
