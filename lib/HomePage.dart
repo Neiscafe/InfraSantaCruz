@@ -410,7 +410,7 @@ class _PostCardWidgetState extends State<PostCardWidget> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(Icons.place_outlined, color: Colors.grey[900]),
-            SizedBox(width: 4),
+            SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -435,14 +435,14 @@ class _PostCardWidgetState extends State<PostCardWidget> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      TextButton(
+                      IconButton(
                         onPressed: () async {
                           launchUrl(
                             Uri.parse("geo:0,0?q=${post.lat},${post.lon}(${post.titulo})"),
                             mode: LaunchMode.externalApplication,
                           );
                         },
-                        child: Text("Ver no mapa"),
+                        icon: Icon(Icons.map_outlined),
                       ),
                     ],
                   ),
