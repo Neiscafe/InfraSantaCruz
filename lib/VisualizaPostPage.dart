@@ -26,8 +26,11 @@ class VisualizaPostPage extends StatefulWidget {
 
 class _VisualizaPostPageState extends State<VisualizaPostPage> {
   late Post post;
+  Post? _pendingPost;
   Timer? _likeDebounceTimer;
   bool? _initialCurtidoPorMim;
+
+  late final StreamSubscription<Post> _postUpdatedSubscription;
 
   final Map<String, Timer> _commentLikeDebounceTimers = {};
   final Map<String, bool> _commentInitialCurtido = {};
@@ -413,7 +416,7 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
 
   Future<void> escreverComentario(Comentario comentario) async {
     try {
-      final response = await PostsRepository.criaComentario(comentario);
+      final response = await PostsRepository.criaComentario(post, comentario);
       final updatedPost = post.copy(
         totalComentarios: post.totalComentarios + 1,
       );
@@ -423,7 +426,6 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
         _comments.insert(0, response);
         comments = _comments;
       });
-      PostsRepository.notifyPostUpdated(updatedPost);
       if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -538,9 +540,9 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
     Comentario acima,
   ) async {
     bool erro = false;
-    Comentario? resposta = null;
+    Comentario? resposta;
     try {
-      resposta = await PostsRepository.criaComentario(comentario);
+      resposta = await PostsRepository.criaComentario(post, comentario);
     } catch (e, trace) {
       erro = true;
     }
@@ -689,7 +691,17 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
   void initState() {
     super.initState();
     setState(() {
-      post = widget.post;
+      post = _pendingPost ?? widget.post;
+      _pendingPost = null;
+    });
+    _postUpdatedSubscription = PostsRepository.onPostUpdated.listen((post) {
+      if (!context.mounted) {
+        _pendingPost = post;
+        return;
+      }
+      setState(() {
+        this.post = post;
+      });
     });
     _respostaController = TextEditingController();
     _comentarioController = TextEditingController();
@@ -698,6 +710,7 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
 
   @override
   void dispose() {
+    _postUpdatedSubscription.cancel();
     if (_likeDebounceTimer != null && _likeDebounceTimer!.isActive) {
       _syncLikeWithServer();
     }
@@ -735,7 +748,6 @@ class _VisualizaPostPageState extends State<VisualizaPostPage> {
     setState(() {
       post = updatedPost;
     });
-    PostsRepository.notifyPostUpdated(updatedPost);
 
     _likeDebounceTimer?.cancel();
     _likeDebounceTimer = Timer(const Duration(milliseconds: 500), () {

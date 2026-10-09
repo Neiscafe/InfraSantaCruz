@@ -19,6 +19,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'NotificationRouter.dart';
 import 'Post.dart';
+import 'Usuario.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -59,7 +60,15 @@ class _HomePageState extends State<HomePage> {
     });
     _streamSubscription = PostsRepository.onPostUpdated.listen((Post post) {
       final index = posts.indexWhere((p) => p.id == post.id);
-      if (index == -1 || !mounted) return;
+      if (!mounted) return;
+      if (index == -1) {
+        setState(() {
+          var _posts = posts.toList();
+          _posts.insert(0, post);
+          this.posts = _posts;
+        });
+        return;
+      }
       setState(() {
         final novos = List.of(posts);
         novos[index] = post;
@@ -91,12 +100,13 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.all(8),
           child: UserIconWidget(
             url: AuthRepository.usuarioAtual.urlAvatar ?? "",
-            onTap: (_) => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) =>
-                    UserPage(user: AuthRepository.usuarioAtual),
-              ),
-            ),
+            onTap: (_) =>
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        UserPage(user: AuthRepository.usuarioAtual),
+                  ),
+                ),
           ),
         ),
         title: Text('Feed de Posts'),
@@ -130,43 +140,50 @@ class _HomePageState extends State<HomePage> {
                     elevation: 4,
                     child: posts.isEmpty
                         ? CustomScrollView(
-                            slivers: [
-                              SliverFillRemaining(
-                                child: Center(
-                                  child: Text("Nenhuma publicação ainda."),
+                      slivers: [
+                        SliverFillRemaining(
+                          child: Center(
+                            child: Text("Nenhuma publicação ainda."),
+                          ),
+                        ),
+                      ],
+                    )
+                        : ListView.builder(
+                      physics: AlwaysScrollableScrollPhysics(),
+                      controller: scrollController,
+                      padding: EdgeInsets.all(12),
+                      itemCount: posts.length + (silentLoading ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == posts.length) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        }
+                        final post = posts[index];
+                        return PostCardWidget(
+                          post,
+                          navega: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) {
+                                  return VisualizaPostPage(post: post);
+                                },
+                              ),
+                            );
+                          },
+                          onProfileTouch: (profile) =>
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (contenxt) =>
+                                      UserPage(user: profile),
                                 ),
                               ),
-                            ],
-                          )
-                        : ListView.builder(
-                            physics: AlwaysScrollableScrollPhysics(),
-                            controller: scrollController,
-                            padding: EdgeInsets.all(12),
-                            itemCount: posts.length + (silentLoading ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              if (index == posts.length) {
-                                return const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 16),
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                );
-                              }
-                              final post = posts[index];
-                              return PostCardWidget(
-                                post,
-                                navega: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) {
-                                        return VisualizaPostPage(post: post);
-                                      },
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
               ],
@@ -236,7 +253,8 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       silentLoading = false;
       if (error == null && novosPosts != null && novosPosts.isNotEmpty) {
-        final postsCopy = posts.toList()..addAll(novosPosts);
+        final postsCopy = posts.toList()
+          ..addAll(novosPosts);
         posts = postsCopy;
         currentPage++;
         if (novosPosts.length < 20) {
@@ -252,8 +270,13 @@ class _HomePageState extends State<HomePage> {
 class PostCardWidget extends StatefulWidget {
   final Post post;
   final VoidCallback navega;
+  final ValueChanged<Usuario> onProfileTouch;
 
-  const PostCardWidget(this.post, {super.key, required this.navega});
+  const PostCardWidget(this.post, {
+    super.key,
+    required this.navega,
+    required this.onProfileTouch,
+  });
 
   @override
   State<PostCardWidget> createState() => _PostCardWidgetState();
@@ -299,17 +322,10 @@ class _PostCardWidgetState extends State<PostCardWidget> {
     final novoCurtido = !curtido;
     final novoNumCurtidas = novoCurtido ? numCurtidas + 1 : numCurtidas - 1;
 
-    final updatedPost = post.copy(
-      curtidoPorMim: novoCurtido,
-      totalCurtidas: novoNumCurtidas,
-    );
-
     setState(() {
       curtido = novoCurtido;
       numCurtidas = novoNumCurtidas;
     });
-
-    PostsRepository.notifyPostUpdated(updatedPost);
 
     _likeDebounceTimer?.cancel();
     _likeDebounceTimer = Timer(const Duration(milliseconds: 500), () {
@@ -416,7 +432,8 @@ class _PostCardWidgetState extends State<PostCardWidget> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "${post.rua}, ${post.bairro.isNotEmpty ? "Bairro ${post.bairro}" : ""}",
+                    "${post.rua}${post.bairro.isNotEmpty ? ", Bairro ${post
+                        .bairro}" : ""}",
                     style: TextStyle(
                       fontWeight: FontWeight.w500,
                       color: Colors.grey[900],
@@ -438,7 +455,10 @@ class _PostCardWidgetState extends State<PostCardWidget> {
                       IconButton(
                         onPressed: () async {
                           launchUrl(
-                            Uri.parse("geo:0,0?q=${post.lat},${post.lon}(${post.titulo})"),
+                            Uri.parse(
+                              "geo:0,0?q=${post.lat},${post.lon}(${post
+                                  .titulo})",
+                            ),
                             mode: LaunchMode.externalApplication,
                           );
                         },
@@ -524,13 +544,7 @@ class _PostCardWidgetState extends State<PostCardWidget> {
       children: [
         UserIconWidget(
           url: post.usuario.urlAvatar ?? "",
-          onTap: (_) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (contenxt) => UserPage(user: post.usuario),
-              ),
-            );
-          },
+          onTap: (_) => widget.onProfileTouch(post.usuario),
         ),
         SizedBox(width: 8),
         Expanded(
@@ -599,7 +613,10 @@ class _FeedMediaItemState extends State<FeedMediaItem> {
           return SizedBox(
             width: width,
             height: height,
-            child: Container(color: Theme.of(context).colorScheme.tertiary),
+            child: Container(color: Theme
+                .of(context)
+                .colorScheme
+                .tertiary),
           );
         }
       },
@@ -635,10 +652,10 @@ class _FeedMediaItemState extends State<FeedMediaItem> {
                 child: _abrindo
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Icon(
-                        Icons.play_circle,
-                        color: Colors.white,
-                        size: 48,
-                      ),
+                  Icons.play_circle,
+                  color: Colors.white,
+                  size: 48,
+                ),
               ),
             ],
           ),
@@ -671,12 +688,10 @@ class _FeedMediaItemState extends State<FeedMediaItem> {
     }
   }
 
-  Widget _imageLoadedWidget(
-    double width,
-    double height,
-    ImageProvider<Object> provider,
-    BuildContext context,
-  ) {
+  Widget _imageLoadedWidget(double width,
+      double height,
+      ImageProvider<Object> provider,
+      BuildContext context,) {
     return _mediaLoadedWidget(
       context,
       width,
@@ -689,7 +704,7 @@ class _FeedMediaItemState extends State<FeedMediaItem> {
           image: DecorationImage(image: provider, fit: BoxFit.fitWidth),
         ),
       ),
-      () {
+          () {
         DefaultCacheManager().getFileFromCache(url).then((fileInfo) {
           if (!context.mounted) {
             return;
@@ -710,13 +725,11 @@ class _FeedMediaItemState extends State<FeedMediaItem> {
     );
   }
 
-  ClipRRect _mediaLoadedWidget(
-    BuildContext context,
-    double width,
-    double height,
-    Widget child,
-    VoidCallback onTapUp,
-  ) {
+  ClipRRect _mediaLoadedWidget(BuildContext context,
+      double width,
+      double height,
+      Widget child,
+      VoidCallback onTapUp,) {
     return ClipRRect(
       borderRadius: BorderRadiusGeometry.circular(14),
       child: Material(
@@ -752,16 +765,17 @@ class _FeedMediaItemState extends State<FeedMediaItem> {
     );
   }
 
-  SizedBox _mediaErrorWidget(
-    double width,
-    double height,
-    BuildContext context,
-  ) {
+  SizedBox _mediaErrorWidget(double width,
+      double height,
+      BuildContext context,) {
     return SizedBox(
       width: width,
       height: height,
       child: Card(
-        color: Theme.of(context).colorScheme.error,
+        color: Theme
+            .of(context)
+            .colorScheme
+            .error,
         child: Center(child: Icon(Icons.video_camera_back_outlined)),
       ),
     );
@@ -786,10 +800,10 @@ class _FeedMediaItemState extends State<FeedMediaItem> {
 
 class PostFilterForm extends StatefulWidget {
   final void Function(
-    String bairro,
-    String rua,
-    ProximidadeFiltro proximidadeFiltro,
-  )
+      String bairro,
+      String rua,
+      ProximidadeFiltro proximidadeFiltro,
+      )
   callback;
 
   const PostFilterForm({super.key, required this.callback});
@@ -918,8 +932,9 @@ class UserIconWidget extends StatelessWidget {
     required this.onTap,
     Size? size,
     double? borderRadius,
-  }) : size = size ?? const Size(40, 40),
-       borderRadius = borderRadius ?? 20;
+  })
+      : size = size ?? const Size(40, 40),
+        borderRadius = borderRadius ?? 20;
 
   Widget _userImage() {
     return SizedBox(
@@ -965,9 +980,9 @@ enum ProximidadeFiltro {
   const ProximidadeFiltro(this.label);
 
   static final List<DropdownMenuEntry<ProximidadeFiltro>> entries =
-      UnmodifiableListView(
-        values.map(
+  UnmodifiableListView(
+    values.map(
           (entry) => DropdownMenuEntry(value: entry, label: entry.label),
-        ),
-      );
+    ),
+  );
 }

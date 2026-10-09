@@ -6,6 +6,8 @@ import 'package:myapp/Post.dart';
 import 'package:myapp/PostsRepository.dart';
 import 'package:myapp/VisualizaPostPage.dart';
 
+import 'UserPage.dart';
+
 class PostsCurtidosPage extends StatefulWidget {
   const PostsCurtidosPage({super.key});
 
@@ -217,7 +219,13 @@ class _PostsCurtidosPageState extends State<PostsCurtidosPage> {
                         });
                       }
                     }
-                  },
+                  },onProfileTouch: (profile)=>
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (contenxt) =>
+                            UserPage(user: profile),
+                      ),
+                    )
                 );
               },
             ),

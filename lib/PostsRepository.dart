@@ -39,15 +39,6 @@ class Endereco extends FiltroPosts {
 enum TipoEndereco { rua, bairro }
 
 class PostsRepository {
-  static final StreamController<Post> _postUpdatedController =
-      StreamController<Post>.broadcast();
-
-  static Stream<Post> get onPostUpdated => _postUpdatedController.stream;
-
-  static void notifyPostUpdated(Post post) {
-    _postUpdatedController.add(post);
-  }
-
   static SupabaseClient get client => Supabase.instance.client;
 
   static SupabaseStorageClient get storage => client.storage;
@@ -56,26 +47,44 @@ class PostsRepository {
 
   static String get userId => AuthRepository.session!.user.id;
 
-  static StreamController<List<XFile>> _midiasPostController =
+  static final StreamController<Post> _postUpdatedController =
+      StreamController<Post>.broadcast();
+
+  static Stream<Post> get onPostUpdated => _postUpdatedController.stream;
+
+  static void _notifyPostUpdated(Post post) {
+    _postUpdatedController.add(post);
+  }
+
+  static final StreamController<List<XFile>> _midiasPostController =
       StreamController<List<XFile>>.broadcast();
 
   static Stream<List<XFile>> get midiasPostStream =>
       _midiasPostController.stream;
 
-  static void adicionaMidia(XFile midia) async {
-    var lista = (await midiasPostStream.last).toList();
-    lista.add(midia);
+  static List<XFile> _midiasCurrentValue = List.empty();
+
+  static List<XFile> get midiasCurrentValue => _midiasCurrentValue;
+
+  static void _notifyMediasUpdated(List<XFile> lista) {
+    _midiasCurrentValue = lista;
     _midiasPostController.add(lista);
+  }
+
+  static void adicionaMidia(XFile midia) async {
+    var lista = midiasCurrentValue.toList();
+    lista.add(midia);
+    _notifyMediasUpdated(lista);
   }
 
   static void removeImagem(XFile imagem) async {
-    var lista = (await midiasPostStream.last).toList();
+    var lista = midiasCurrentValue.toList();
     lista.remove(imagem);
-    _midiasPostController.add(lista);
+    _notifyMediasUpdated(lista);
   }
 
   static void limpaImagens() async {
-    _midiasPostController.add(List.empty());
+    _notifyMediasUpdated(List.empty());
   }
 
   static Future<List<Post>> buscaPosts(
@@ -149,7 +158,7 @@ class PostsRepository {
   }
 
   static Future<void> criaPost(Post post) async {
-    final midiasPost = await midiasPostStream.last;
+    final midiasPost = midiasCurrentValue;
     List<Map<String, dynamic>> filesData = List.empty(growable: true);
     for (int i = 0; i < midiasPost.length; i++) {
       final arquivo = midiasPost[i];
@@ -180,7 +189,7 @@ class PostsRepository {
     } catch (e, trace) {
       debugPrint(trace.toString());
       debugPrint(e.toString());
-      _midiasPostController.add(List.empty());
+      _notifyMediasUpdated(List.empty());
       throw Exception("Falha ao criar registro de post: $e");
     }
     try {
@@ -205,22 +214,26 @@ class PostsRepository {
       debugPrint(e.toString());
       throw Exception("Falha ao criar mídias do post: $e");
     } finally {
-      midiasPost.clear();
+      _notifyPostUpdated(post);
+      _notifyMediasUpdated(List.empty());
     }
   }
 
   static Future<void> curtePost(Post post) async {
     try {
+      _notifyPostUpdated(post);
       await client.from("post_likes").insert({"post_id": post.id});
     } catch (e, trace) {
       debugPrint(trace.toString());
       debugPrint(e.toString());
+      _notifyPostUpdated(post);
       throw Exception("Falha ao curtir post: $e");
     }
   }
 
   static Future<void> descurtePost(Post post) async {
     try {
+      _notifyPostUpdated(post);
       await client
           .from("post_likes")
           .delete()
@@ -229,6 +242,7 @@ class PostsRepository {
     } catch (e, trace) {
       debugPrint(trace.toString());
       debugPrint(e.toString());
+      _notifyPostUpdated(post);
       throw Exception("Falha ao descurtir post: $e");
     }
   }
@@ -389,7 +403,10 @@ class PostsRepository {
     }
   }
 
-  static Future<Comentario> criaComentario(Comentario comentario) async {
+  static Future<Comentario> criaComentario(
+    Post post,
+    Comentario comentario,
+  ) async {
     try {
       final response = await client
           .from("post_comments")
@@ -397,6 +414,9 @@ class PostsRepository {
           .select(
             "*, usuario:users!post_comments_usuario_id_fkey(*), reply_username:users!post_comments_user_reply_id_fkey(full_name)",
           );
+      _notifyPostUpdated(
+        post.copy(totalComentarios: post.totalComentarios + 1),
+      );
       return response.map((it) => Comentario.fromJson(it)).first;
     } catch (e, trace) {
       debugPrint(trace.toString());

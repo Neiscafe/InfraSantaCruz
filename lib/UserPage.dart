@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:myapp/AuthRepository.dart';
 import 'package:myapp/HomePage.dart';
@@ -178,6 +179,14 @@ class _UserPageState extends State<UserPage> {
                       builder: (context) => VisualizaPostPage(post: post),
                     ),
                   ),
+                  onProfileTouch: (profile) {
+                    if (profile.usuarioId == widget.user.usuarioId) return;
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (contenxt) => UserPage(user: profile),
+                      ),
+                    );
+                  },
                 ),
               );
             }),
@@ -219,14 +228,18 @@ class _UserPageState extends State<UserPage> {
             ],
           ),
         ),
-        SizedBox(height: 16,),
+        SizedBox(height: 16),
         Center(
           child: Text(
             widget.user.fullName,
-            style: TextStyle(fontSize: 24, color: Colors.grey[900], fontWeight: FontWeight.w400),
+            style: TextStyle(
+              fontSize: 24,
+              color: Colors.grey[900],
+              fontWeight: FontWeight.w400,
+            ),
           ),
         ),
-        SizedBox(height: 16,),
+        SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Card.filled(
@@ -244,7 +257,7 @@ class _UserPageState extends State<UserPage> {
                       Text(widget.user.email!, style: TextStyle(fontSize: 16)),
                     ],
                   ),
-                  SizedBox(height: 4,),
+                  SizedBox(height: 4),
                   Row(
                     spacing: 8,
                     children: [

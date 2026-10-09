@@ -672,7 +672,7 @@ class MediaListWidget extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (context) => DisplayPictureScreen(
                       imagePath: file.path,
-                      readOnly: false,
+                      readOnly: true,
                     ),
                   ),
                 );
@@ -703,7 +703,7 @@ class MediaListWidget extends StatelessWidget {
                     builder: (context) {
                       return DisplayVideoScreen(
                         imagePath: file.path,
-                        readOnly: false,
+                        readOnly: true,
                       );
                     },
                   ),
