@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:myapp/data/Usuario.dart';
 import 'package:myapp/data/repository/AuthRepository.dart';
-import 'package:myapp/feature/posts/PostsHomeScreen.dart';
+import 'package:myapp/feature/posts/PostCardWidget.dart';
 import 'package:myapp/feature/startup/LoginScreen.dart';
 
 import '../../consts/Consts.dart';

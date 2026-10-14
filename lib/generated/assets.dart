@@ -44,11 +44,13 @@ class $AssetsFeatureGen {
 class $AssetsPostsGen {
   const $AssetsPostsGen();
 
-  final String homePage = 'lib/feature/posts/PostsHomeScreen.dart';
-  final String photoMenuPage = 'lib/feature/posts/PostCreationScreen.dart';
-  final String postsCurtidosPage = 'lib/feature/posts/PostsCurtidosScreen.dart';
-  final String userPage = 'lib/feature/posts/UserPostsScreen.dart';
-  final String visualizaPostPage = 'lib/feature/posts/PostDetailsScreen.dart';
+  final String postCardWidget = 'lib/feature/posts/PostCardWidget.dart';
+  final String postCreationScreen = 'lib/feature/posts/PostCreationScreen.dart';
+  final String postDetailsScreen = 'lib/feature/posts/PostDetailsScreen.dart';
+  final String postsCurtidosScreen =
+      'lib/feature/posts/PostsCurtidosScreen.dart';
+  final String postsHomeScreen = 'lib/feature/posts/PostsHomeScreen.dart';
+  final String userPostsScreen = 'lib/feature/posts/UserPostsScreen.dart';
 }
 
 class $AssetsStartupGen {
@@ -56,8 +58,8 @@ class $AssetsStartupGen {
 
   final String connectivityWrapper =
       'lib/feature/startup/ConnectivityWrapper.dart';
-  final String loginPage = 'lib/feature/startup/LoginScreen.dart';
-  final String permissaoPage = 'lib/feature/startup/PermissionScreen.dart';
+  final String loginScreen = 'lib/feature/startup/LoginScreen.dart';
+  final String permissionScreen = 'lib/feature/startup/PermissionScreen.dart';
   final String splashScreen = 'lib/feature/startup/SplashScreen.dart';
 }
 

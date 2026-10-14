@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:myapp/consts/Consts.dart';
 import 'package:myapp/data/repository/PostsRepository.dart';
-import 'package:myapp/feature/posts/PostsHomeScreen.dart';
+import 'package:myapp/feature/posts/PostCardWidget.dart';
 import 'package:myapp/feature/posts/PostDetailsScreen.dart';
 
 import '../../data/Post.dart';
